@@ -1,6 +1,7 @@
 package main
 
 import (
+	"alaninnovates.com/hive-bot/database"
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -16,6 +17,7 @@ import (
 type Bot struct {
 	Logger log.Logger
 	Client bot.Client
+	Db     database.Database
 	State  State
 }
 
@@ -25,21 +27,35 @@ func main() {
 
 	err := godotenv.Load(".env")
 	if err != nil {
-		logger.Fatal("Failed to load env variables: ", err)
+		logger.Fatal("Failed to load .env: ", err)
 	}
 
 	var (
 		token   = os.Getenv("TOKEN")
 		guildID = snowflake.GetEnv("GUILD_ID")
+		dbUri   = os.Getenv("MONGODB_URI")
 	)
 
 	hiveBot := &Bot{
 		Logger: logger,
+		Db:     *database.NewDatabase(),
 		State:  *NewState(),
 	}
 
+	client, err := hiveBot.Db.Connect(dbUri)
+	if err != nil {
+		logger.Fatal("Failed to connect to database: ", err)
+	}
+
+	defer func() {
+		if err := client.Disconnect(context.TODO()); err != nil {
+			panic(err)
+		}
+	}()
+
 	h := handler.New(logger)
 	InitializeHiveCommands(h, hiveBot)
+	InitializeGameCommands(h, hiveBot)
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),

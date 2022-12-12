@@ -16,7 +16,6 @@ func GetBeeImage(name string) image.Image {
 	}
 	gd.Scale(0.65, 0.65)
 	gd.DrawImage(img, 0, 0)
-	//gd.SavePNG("test.png")
 	return gd.Image()
 }
 

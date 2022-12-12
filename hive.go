@@ -3,10 +3,16 @@ package main
 import (
 	"alaninnovates.com/hive-bot/hive"
 	"alaninnovates.com/hive-bot/loaders"
+	"context"
+	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
 	"github.com/fogleman/gg"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
+	"golang.org/x/exp/slices"
 	"image"
 	"image/png"
 	"io"
@@ -74,14 +80,14 @@ func HiveCommand(b *Bot) handler.Command {
 					Options: []discord.ApplicationCommandOption{
 						discord.ApplicationCommandOptionString{
 							Name:        "slots",
-							Description: "The slot(s) of the loaders you want to remove",
+							Description: "The slot(s) of the bees you want to remove",
 							Required:    true,
 						},
 					},
 				},
 				discord.ApplicationCommandOptionSubCommand{
 					Name:        "giftall",
-					Description: "Gift all loaders in your hive",
+					Description: "Gift all bees in your hive",
 				},
 				discord.ApplicationCommandOptionSubCommand{
 					Name:        "setbeequip",
@@ -111,13 +117,56 @@ func HiveCommand(b *Bot) handler.Command {
 						},
 					},
 				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "save",
+					Description: "Save your hive",
+					Options: []discord.ApplicationCommandOption{
+						discord.ApplicationCommandOptionString{
+							Name:        "name",
+							Description: "The name of the hive",
+							Required:    true,
+						},
+					},
+				},
+				discord.ApplicationCommandOptionSubCommandGroup{
+					Name:        "saves",
+					Description: "Manage saves",
+					Options: []discord.ApplicationCommandOptionSubCommand{
+						{
+							Name:        "load",
+							Description: "Load a hive save",
+							Options: []discord.ApplicationCommandOption{
+								discord.ApplicationCommandOptionString{
+									Name:        "id",
+									Description: "The id of the hive save",
+									Required:    true,
+								},
+							},
+						},
+						{
+							Name:        "list",
+							Description: "View your hive saves",
+						},
+						{
+							Name:        "delete",
+							Description: "Delete a hive save",
+							Options: []discord.ApplicationCommandOption{
+								discord.ApplicationCommandOptionString{
+									Name:        "id",
+									Description: "The id of the hive save",
+									Required:    true,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 		CommandHandlers: map[string]handler.CommandHandler{
 			"create": func(event *events.ApplicationCommandInteractionCreate) error {
 				b.State.CreateHive(event.User().ID)
 				return event.CreateMessage(discord.MessageCreate{
-					Content: "Created new hive. You can now add loaders with the `/hive add` command.",
+					Content: "Created new hive. You can now add bees with the `/hive add` command.",
 				})
 			},
 			"add": func(event *events.ApplicationCommandInteractionCreate) error {
@@ -129,6 +178,11 @@ func HiveCommand(b *Bot) handler.Command {
 				}
 				data := event.SlashCommandInteractionData()
 				name, _ := data.OptString("name")
+				if !slices.Contains(loaders.GetBees(), name) {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "That bee doesn't exist.",
+					})
+				}
 				slots, _ := data.OptString("slots")
 				level, _ := data.OptInt("level")
 				gifted, exists := data.OptBool("gifted")
@@ -169,7 +223,7 @@ func HiveCommand(b *Bot) handler.Command {
 					bee.SetGifted(true)
 				}
 				return event.CreateMessage(discord.MessageCreate{
-					Content: "Gifted all loaders in hive.",
+					Content: "Gifted all bees in hive.",
 				})
 			},
 			"setbeequip": func(event *events.ApplicationCommandInteractionCreate) error {
@@ -182,6 +236,11 @@ func HiveCommand(b *Bot) handler.Command {
 				data := event.SlashCommandInteractionData()
 				slots, _ := data.OptString("slots")
 				name, _ := data.OptString("name")
+				if !slices.Contains(loaders.GetBeequips(), name) {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "That beequip doesn't exist.",
+					})
+				}
 				for _, slot := range GetRangeNumbers(slots) {
 					h.GetBee(slot).SetBeequip(name)
 				}
@@ -201,7 +260,7 @@ func HiveCommand(b *Bot) handler.Command {
 				if !provided {
 					showHiveNumbers = true
 				}
-				dc := gg.NewContext(400, 900)
+				dc := gg.NewContext(410, 900)
 				h.Draw(dc, showHiveNumbers)
 				img := dc.Image()
 				r, w := io.Pipe()
@@ -226,6 +285,148 @@ func HiveCommand(b *Bot) handler.Command {
 							Reader: r,
 						},
 					},
+				})
+			},
+			"save": func(event *events.ApplicationCommandInteractionCreate) error {
+				h := b.State.GetHive(event.User().ID)
+				if h == nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a hive. Create one with the `/hive create` command.",
+					})
+				}
+				data := event.SlashCommandInteractionData()
+				name, _ := data.OptString("name")
+				if name == "" {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You need to provide a non-empty name for the hive.",
+					})
+				}
+				userSaveCount, _ := b.Db.Collection("hives").CountDocuments(context.Background(), bson.M{"user_id": event.User().ID})
+				if int(userSaveCount) >= MAX_FREE_SAVES {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You have reached the maximum number of free saves. You can get more saves by donating.",
+					})
+				}
+				res, err := b.Db.Collection("hives").UpdateOne(context.Background(), bson.M{
+					"user_id": event.User().ID,
+					"name":    name,
+				}, bson.D{{
+					"$set",
+					h.ToBson(),
+				}}, options.Update().SetUpsert(true))
+				if err != nil {
+					b.Logger.Error("Error saving hive: ", err)
+				}
+				id := res.UpsertedID
+				if id == nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "Updated save.",
+					})
+				}
+				oid, _ := id.(primitive.ObjectID)
+				hiveId, _ := oid.MarshalText()
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Saved hive. ID: `" + string(hiveId) + "`",
+				})
+			},
+			"saves/load": func(event *events.ApplicationCommandInteractionCreate) error {
+				//maybe defer?
+				data := event.SlashCommandInteractionData()
+				id, _ := data.OptString("id")
+				if id == "" {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You need to provide a non-empty id for the hive.",
+					})
+				}
+				oid, err := primitive.ObjectIDFromHex(id)
+				if err != nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "Invalid id.",
+					})
+				}
+				var h bson.D
+				err = b.Db.Collection("hives").FindOne(context.Background(), bson.M{
+					"user_id": event.User().ID,
+					"_id":     oid,
+				}).Decode(&h)
+				if err != nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a hive with that id.",
+					})
+				}
+				userHive := b.State.CreateHive(event.User().ID)
+				for _, bh := range h.Map()["bees"].(primitive.D) {
+					be := bh.Value.(primitive.D)
+					name := be.Map()["name"].(string)
+					level := be.Map()["level"].(int32)
+					gifted := be.Map()["gifted"].(bool)
+					beequip, ok := be.Map()["beequip"].(string)
+					if !ok {
+						beequip = ""
+					}
+					bee := hive.NewBee(int(level), name, gifted)
+					bee.SetBeequip(beequip)
+					i, _ := strconv.ParseInt(bh.Key, 10, 64)
+					userHive.AddBee(bee, int(i))
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Loaded hive.",
+				})
+			},
+			"saves/list": func(event *events.ApplicationCommandInteractionCreate) error {
+				var results []bson.D
+				cur, _ := b.Db.Collection("hives").Find(context.Background(), bson.M{"user_id": event.User().ID})
+				err := cur.All(context.Background(), &results)
+				if err != nil {
+					b.Logger.Error(err)
+				}
+				if len(results) == 0 {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have any saves.",
+					})
+				}
+				var saves []string
+				for i, result := range results {
+					id, _ := result.Map()["_id"].(primitive.ObjectID).MarshalText()
+					saves = append(saves, fmt.Sprintf("%d. %s (`%s`)", i+1, result.Map()["name"], id))
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Embeds: []discord.Embed{
+						{
+							Title:       "Your Saves",
+							Description: strings.Join(saves, "\n"),
+						},
+					},
+				})
+			},
+			"saves/delete": func(event *events.ApplicationCommandInteractionCreate) error {
+				data := event.SlashCommandInteractionData()
+				id, _ := data.OptString("id")
+				if id == "" {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You need to provide the ID of the save you want to delete.",
+					})
+				}
+				oid, err := primitive.ObjectIDFromHex(id)
+				if err != nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "Invalid ID.",
+					})
+				}
+				res, err := b.Db.Collection("hives").DeleteOne(context.Background(), bson.M{
+					"_id":     oid,
+					"user_id": event.User().ID,
+				})
+				if err != nil {
+					b.Logger.Error(err)
+				}
+				if res.DeletedCount == 0 {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a save with that ID.",
+					})
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Deleted save.",
 				})
 			},
 		},

@@ -14,7 +14,7 @@ func GetBeequipImage(name string) image.Image {
 	if err != nil {
 		panic(err)
 	}
-	gd.Scale(0.4, 0.4)
+	gd.Scale(0.3, 0.3)
 	gd.DrawImage(img, 0, 0)
 	return gd.Image()
 }

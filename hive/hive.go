@@ -2,6 +2,7 @@ package hive
 
 import (
 	"github.com/fogleman/gg"
+	"go.mongodb.org/mongo-driver/bson"
 	"image/color"
 	"strconv"
 )
@@ -30,9 +31,22 @@ func (h *Hive) GetBees() map[int]*Bee {
 	return h.bees
 }
 
+func (h *Hive) ToBson() bson.D {
+	bees := bson.D{}
+	for i := 0; i < 50; i++ {
+		bee := h.bees[i+1]
+		if bee != nil {
+			bees = append(bees, bson.E{Key: strconv.Itoa(i + 1), Value: bee.ToBson()})
+		}
+	}
+	return bson.D{{"bees", bees}}
+}
+
 var (
 	slotColor = "#7d5a2f"
 	bgColor   = "#ba8441"
+	offsetX   = 10
+	offsetY   = 20
 )
 
 func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
@@ -47,8 +61,8 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 		for j := 0; j < 5; j++ {
 			bee := h.bees[i*5+j+1]
 			if j%2 == 0 {
-				x := bottomCnt*50*3 + 50
-				y := bottom - (i*80 + 50)
+				x := bottomCnt*50*3 + 50 + offsetX
+				y := bottom - (i*80 + 50) - offsetY
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
 				dc.Fill()
@@ -67,8 +81,8 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 				}
 				bottomCnt++
 			} else {
-				x := topCnt*50*3 + 75 + 50
-				y := bottom - (i*80 + 15 + 25 + 50)
+				x := topCnt*50*3 + 75 + 50 + offsetX
+				y := bottom - (i*80 + 15 + 25 + 50) - offsetY
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
 				dc.Fill()
@@ -89,7 +103,7 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 			}
 		}
 	}
-	dd := gg.NewContext(400, 900)
+	dd := gg.NewContext(410, 900)
 	err := dc.SetMask(dd.AsMask())
 	if err != nil {
 		panic(err)
@@ -97,7 +111,6 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 	dc.InvertMask()
 	ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Bold.ttf", 40)
 	dc.SetFontFace(ff)
-	dc.SetColor(color.White)
 	for _, f := range postProcessFuncs {
 		f()
 	}
