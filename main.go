@@ -1,7 +1,10 @@
 package main
 
 import (
+	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
+	"alaninnovates.com/hive-bot/gameplugin"
+	"alaninnovates.com/hive-bot/hiveplugin"
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -13,13 +16,6 @@ import (
 	"os/signal"
 	"syscall"
 )
-
-type Bot struct {
-	Logger log.Logger
-	Client bot.Client
-	Db     database.Database
-	State  State
-}
 
 func main() {
 	logger := log.New(log.LstdFlags | log.Lshortfile)
@@ -36,10 +32,9 @@ func main() {
 		dbUri   = os.Getenv("MONGODB_URI")
 	)
 
-	hiveBot := &Bot{
+	hiveBot := &common.Bot{
 		Logger: logger,
 		Db:     *database.NewDatabase(),
-		State:  *NewState(),
 	}
 
 	client, err := hiveBot.Db.Connect(dbUri)
@@ -54,8 +49,8 @@ func main() {
 	}()
 
 	h := handler.New(logger)
-	InitializeHiveCommands(h, hiveBot)
-	InitializeGameCommands(h, hiveBot)
+	gameplugin.Initialize(h, hiveBot)
+	hiveplugin.Initialize(h, hiveBot)
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),

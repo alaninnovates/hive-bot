@@ -1,7 +1,7 @@
 package database
 
 import (
-	"alaninnovates.com/hive-bot/hive"
+	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"

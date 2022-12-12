@@ -1,8 +1,9 @@
-package main
+package hiveplugin
 
 import (
-	"alaninnovates.com/hive-bot/hive"
-	"alaninnovates.com/hive-bot/loaders"
+	"alaninnovates.com/hive-bot/common"
+	"alaninnovates.com/hive-bot/common/loaders"
+	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
 	"fmt"
 	"github.com/disgoorg/disgo/discord"
@@ -37,7 +38,8 @@ func GetRangeNumbers(rangeStr string) []int {
 	return nums
 }
 
-func HiveCommand(b *Bot) handler.Command {
+func HiveCommand(b *common.Bot) handler.Command {
+	hiveService := NewHiveService()
 	return handler.Command{
 		Create: discord.SlashCommandCreate{
 			Name:        "hive",
@@ -164,13 +166,13 @@ func HiveCommand(b *Bot) handler.Command {
 		},
 		CommandHandlers: map[string]handler.CommandHandler{
 			"create": func(event *events.ApplicationCommandInteractionCreate) error {
-				b.State.CreateHive(event.User().ID)
+				hiveService.CreateHive(event.User().ID)
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Created new hive. You can now add bees with the `/hive add` command.",
 				})
 			},
 			"add": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -197,7 +199,7 @@ func HiveCommand(b *Bot) handler.Command {
 				})
 			},
 			"remove": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -213,7 +215,7 @@ func HiveCommand(b *Bot) handler.Command {
 				})
 			},
 			"giftall": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -227,7 +229,7 @@ func HiveCommand(b *Bot) handler.Command {
 				})
 			},
 			"setbeequip": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -249,7 +251,7 @@ func HiveCommand(b *Bot) handler.Command {
 				})
 			},
 			"view": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -288,7 +290,7 @@ func HiveCommand(b *Bot) handler.Command {
 				})
 			},
 			"save": func(event *events.ApplicationCommandInteractionCreate) error {
-				h := b.State.GetHive(event.User().ID)
+				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
@@ -302,7 +304,7 @@ func HiveCommand(b *Bot) handler.Command {
 					})
 				}
 				userSaveCount, _ := b.Db.Collection("hives").CountDocuments(context.Background(), bson.M{"user_id": event.User().ID})
-				if int(userSaveCount) >= MAX_FREE_SAVES {
+				if int(userSaveCount) >= common.MaxFreeSaves {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You have reached the maximum number of free saves. You can get more saves by donating.",
 					})
@@ -354,7 +356,7 @@ func HiveCommand(b *Bot) handler.Command {
 						Content: "You don't have a hive with that id.",
 					})
 				}
-				userHive := b.State.CreateHive(event.User().ID)
+				userHive := hiveService.CreateHive(event.User().ID)
 				for _, bh := range h.Map()["bees"].(primitive.D) {
 					be := bh.Value.(primitive.D)
 					name := be.Map()["name"].(string)
@@ -459,6 +461,6 @@ func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCre
 	}
 }
 
-func InitializeHiveCommands(h *handler.Handler, b *Bot) {
+func Initialize(h *handler.Handler, b *common.Bot) {
 	h.AddCommands(HiveCommand(b))
 }

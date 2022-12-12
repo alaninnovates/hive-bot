@@ -1,7 +1,7 @@
-package main
+package hiveplugin
 
 import (
-	"alaninnovates.com/hive-bot/hive"
+	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"github.com/disgoorg/snowflake/v2"
 )
 
@@ -9,7 +9,7 @@ type State struct {
 	users map[snowflake.ID]*hive.Hive
 }
 
-func NewState() *State {
+func NewHiveService() *State {
 	return &State{users: make(map[snowflake.ID]*hive.Hive)}
 }
 

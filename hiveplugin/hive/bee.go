@@ -1,7 +1,7 @@
 package hive
 
 import (
-	"alaninnovates.com/hive-bot/loaders"
+	"alaninnovates.com/hive-bot/common/loaders"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
 	"image/color"
