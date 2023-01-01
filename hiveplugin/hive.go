@@ -14,9 +14,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/slices"
-	"image"
-	"image/png"
-	"io"
 	"strconv"
 	"strings"
 )
@@ -109,6 +106,27 @@ func HiveCommand(b *common.Bot) handler.Command {
 					},
 				},
 				discord.ApplicationCommandOptionSubCommand{
+					Name:        "setmutation",
+					Description: "Set the mutation of a bee",
+					Options: []discord.ApplicationCommandOption{
+						discord.ApplicationCommandOptionString{
+							Name:        "slots",
+							Description: "The slot(s) of the bees you want to set the mutation of",
+							Required:    true,
+						},
+						discord.ApplicationCommandOptionString{
+							Name:         "name",
+							Description:  "The mutation you want to set",
+							Required:     true,
+							Autocomplete: true,
+						},
+					},
+				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "info",
+					Description: "Get a summary of the bees in your hive",
+				},
+				discord.ApplicationCommandOptionSubCommand{
 					Name:        "view",
 					Description: "View your hive",
 					Options: []discord.ApplicationCommandOption{
@@ -180,7 +198,7 @@ func HiveCommand(b *common.Bot) handler.Command {
 				}
 				data := event.SlashCommandInteractionData()
 				name, _ := data.OptString("name")
-				if !slices.Contains(loaders.GetBees(), name) {
+				if !slices.Contains(loaders.GetBeeNames(), name) {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "That bee doesn't exist.",
 					})
@@ -192,10 +210,10 @@ func HiveCommand(b *common.Bot) handler.Command {
 					gifted = false
 				}
 				for _, slot := range GetRangeNumbers(slots) {
-					h.AddBee(hive.NewBee(level, name, gifted), slot)
+					h.AddBee(hive.NewBee(level, loaders.GetBeeId(name), gifted), slot)
 				}
 				return event.CreateMessage(discord.MessageCreate{
-					Content: "Added bee(s) to hive.",
+					Content: "Added bee(s) to hive.\nYou can now see your hive by using `/hive view` command",
 				})
 			},
 			"remove": func(event *events.ApplicationCommandInteractionCreate) error {
@@ -250,7 +268,7 @@ func HiveCommand(b *common.Bot) handler.Command {
 					Content: "Set beequip of bee(s).",
 				})
 			},
-			"view": func(event *events.ApplicationCommandInteractionCreate) error {
+			"setmutation": func(event *events.ApplicationCommandInteractionCreate) error {
 				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
 					return event.CreateMessage(discord.MessageCreate{
@@ -258,22 +276,64 @@ func HiveCommand(b *common.Bot) handler.Command {
 					})
 				}
 				data := event.SlashCommandInteractionData()
+				slots, _ := data.OptString("slots")
+				name, _ := data.OptString("name")
+				if !slices.Contains(loaders.GetMutations(), name) {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "That mutation doesn't exist.",
+					})
+				}
+				for _, slot := range GetRangeNumbers(slots) {
+					h.GetBee(slot).SetMutation(name)
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Set mutation of bee(s).",
+				})
+			},
+			"info": func(event *events.ApplicationCommandInteractionCreate) error {
+				bees := make(map[string]int)
+				h := hiveService.GetHive(event.User().ID)
+				if h == nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a hive. Create one with the `/hive create` command.",
+					})
+				}
+				for _, bee := range h.GetBees() {
+					bees[bee.Name()]++
+				}
+				beesStr := ""
+				for name, count := range bees {
+					beesStr += fmt.Sprintf("%s: %d\n", name, count)
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Embeds: []discord.Embed{
+						{
+							Title:       "Hive Info",
+							Description: beesStr,
+							Color:       0x00FF00,
+						},
+					},
+				})
+			},
+			"view": func(event *events.ApplicationCommandInteractionCreate) error {
+				h := hiveService.GetHive(event.User().ID)
+				if h == nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a hive. Create one with the `/hive create` command.",
+					})
+				}
+				event.DeferCreateMessage(false)
+				data := event.SlashCommandInteractionData()
 				showHiveNumbers, provided := data.OptBool("show_hive_numbers")
 				if !provided {
 					showHiveNumbers = true
 				}
-				dc := gg.NewContext(410, 900)
+				dc := gg.NewContext(410, 950)
 				h.Draw(dc, showHiveNumbers)
 				img := dc.Image()
-				r, w := io.Pipe()
-				go func(i image.Image) {
-					defer w.Close()
-					if err := png.Encode(w, i); err != nil {
-						panic(err)
-					}
-				}(img)
-				return event.CreateMessage(discord.MessageCreate{
-					Embeds: []discord.Embed{
+				r := common.ImageToPipe(img)
+				_, err := b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+					Embeds: &[]discord.Embed{
 						{
 							Title: event.User().Username + "'s Hive",
 							Image: &discord.EmbedResource{
@@ -288,6 +348,7 @@ func HiveCommand(b *common.Bot) handler.Command {
 						},
 					},
 				})
+				return err
 			},
 			"save": func(event *events.ApplicationCommandInteractionCreate) error {
 				h := hiveService.GetHive(event.User().ID)
@@ -359,15 +420,20 @@ func HiveCommand(b *common.Bot) handler.Command {
 				userHive := hiveService.CreateHive(event.User().ID)
 				for _, bh := range h.Map()["bees"].(primitive.D) {
 					be := bh.Value.(primitive.D)
-					name := be.Map()["name"].(string)
+					id := be.Map()["id"].(string)
 					level := be.Map()["level"].(int32)
 					gifted := be.Map()["gifted"].(bool)
 					beequip, ok := be.Map()["beequip"].(string)
+					mutation, ok2 := be.Map()["mutation"].(string)
 					if !ok {
 						beequip = ""
 					}
-					bee := hive.NewBee(int(level), name, gifted)
+					if !ok2 {
+						mutation = "None"
+					}
+					bee := hive.NewBee(int(level), id, gifted)
 					bee.SetBeequip(beequip)
+					bee.SetMutation(mutation)
 					i, _ := strconv.ParseInt(bh.Key, 10, 64)
 					userHive.AddBee(bee, int(i))
 				}
@@ -433,8 +499,9 @@ func HiveCommand(b *common.Bot) handler.Command {
 			},
 		},
 		AutocompleteHandlers: map[string]handler.AutocompleteHandler{
-			"add":        makeAutocompleteHandler(loaders.GetBees()),
-			"setbeequip": makeAutocompleteHandler(loaders.GetBeequips()),
+			"add":         makeAutocompleteHandler(loaders.GetBeeNames()),
+			"setbeequip":  makeAutocompleteHandler(loaders.GetBeequips()),
+			"setmutation": makeAutocompleteHandler(loaders.GetMutations()),
 		},
 	}
 }

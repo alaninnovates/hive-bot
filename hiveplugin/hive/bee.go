@@ -4,19 +4,25 @@ import (
 	"alaninnovates.com/hive-bot/common/loaders"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
-	"image/color"
 	"strconv"
 )
 
 type Bee struct {
-	level   int
-	name    string
-	gifted  bool
-	beequip string
+	level    int
+	id       string
+	name     string
+	gifted   bool
+	beequip  string
+	mutation string
 }
 
-func NewBee(level int, name string, gifted bool) *Bee {
-	return &Bee{level, name, gifted, ""}
+func NewBee(level int, id string, gifted bool) *Bee {
+	_, meta := loaders.GetBee(id)
+	return &Bee{level, id, meta.Name, gifted, "", "None"}
+}
+
+func (b *Bee) Name() string {
+	return b.name
 }
 
 func (b *Bee) SetGifted(state bool) {
@@ -27,36 +33,47 @@ func (b *Bee) SetBeequip(name string) {
 	b.beequip = name
 }
 
+func (b *Bee) SetMutation(mutation string) {
+	b.mutation = mutation
+}
+
 func (b *Bee) ToBson() bson.D {
-	return bson.D{{"name", b.name}, {"level", b.level}, {"gifted", b.gifted}}
+	return bson.D{
+		{"id", b.id},
+		{"level", b.level},
+		{"gifted", b.gifted},
+		{"beequip", b.beequip},
+		{"mutation", b.mutation},
+	}
 }
 
 func (b *Bee) Draw(dc *gg.Context, x int, y int) func() {
 	if b.gifted {
-		dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
+		dc.SetLineWidth(4)
 		dc.SetHexColor("#ffff00")
-		dc.Fill()
+		dc.DrawRegularPolygon(6, float64(x), float64(y), 42, 0)
+		dc.Stroke()
 	}
-	dd := gg.NewContext(410, 900)
-	dd.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
-	dd.Fill()
-	err := dc.SetMask(dd.AsMask())
-	if err != nil {
-		panic(err)
+	face, beeMeta := loaders.GetBee(b.id)
+	switch beeMeta.Kind {
+	case loaders.Common:
+		dc.SetHexColor("#A76F33")
+	case loaders.Rare:
+		dc.SetHexColor("#9B9B9B")
+	case loaders.Epic:
+		dc.SetHexColor("#A48B37")
+	case loaders.Legendary:
+		dc.SetHexColor("#87CFCE")
+	case loaders.Mythic:
+		dc.SetHexColor("#826FAC")
+	case loaders.Event:
+		dc.SetHexColor("#74B052")
 	}
-	dc.DrawImageAnchored(loaders.GetBeeImage(b.name), x, y, 0.5, 0.5)
-	dd = gg.NewContext(410, 900)
-	err = dc.SetMask(dd.AsMask())
-	if err != nil {
-		panic(err)
-	}
-	dc.InvertMask()
+	dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
+	dc.Fill()
+	dc.DrawImageAnchored(face, x, y, 0.5, 0.5)
 	return func() {
-		if b.gifted {
-			dc.SetHexColor("#ffd085")
-		} else {
-			dc.SetColor(color.White)
-		}
+		dc.SetHexColor(loaders.GetMutation(b.mutation))
 		dc.DrawStringAnchored(strconv.Itoa(b.level), float64(x-60), float64(y-10), 0, 0.5)
 		if b.beequip != "" {
 			dc.DrawImageAnchored(loaders.GetBeequipImage(b.beequip), x+15, y+15, 0.5, 0)

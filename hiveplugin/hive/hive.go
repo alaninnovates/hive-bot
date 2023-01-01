@@ -45,8 +45,8 @@ func (h *Hive) ToBson() bson.D {
 var (
 	slotColor = "#7d5a2f"
 	bgColor   = "#ba8441"
-	offsetX   = 10
-	offsetY   = 20
+	offsetX   = 18
+	offsetY   = 15
 )
 
 func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
@@ -61,7 +61,7 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 		for j := 0; j < 5; j++ {
 			bee := h.bees[i*5+j+1]
 			if j%2 == 0 {
-				x := bottomCnt*50*3 + 50 + offsetX
+				x := bottomCnt*46*3 + 50 + offsetX
 				y := bottom - (i*80 + 50) - offsetY
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
@@ -81,7 +81,7 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 				}
 				bottomCnt++
 			} else {
-				x := topCnt*50*3 + 75 + 50 + offsetX
+				x := topCnt*46*3 + 70 + 50 + offsetX
 				y := bottom - (i*80 + 15 + 25 + 50) - offsetY
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
@@ -103,13 +103,19 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 			}
 		}
 	}
-	dd := gg.NewContext(410, 900)
+	// add some credits
+	ff, _ := gg.LoadFontFace("assets/fonts/UniformRnd-Black.ttf", 40)
+	dc.SetFontFace(ff)
+	dc.SetColor(color.White)
+	dc.DrawStringAnchored("Hive Builder Bot", float64(dc.Width()/2), 50, 0.5, 0)
+	// simulate "layers" with post-processing functions
+	dd := gg.NewContext(410, 950)
 	err := dc.SetMask(dd.AsMask())
 	if err != nil {
 		panic(err)
 	}
 	dc.InvertMask()
-	ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Bold.ttf", 40)
+	ff, _ = gg.LoadFontFace("assets/fonts/Roboto-Bold.ttf", 30)
 	dc.SetFontFace(ff)
 	for _, f := range postProcessFuncs {
 		f()

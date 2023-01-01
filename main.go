@@ -4,7 +4,9 @@ import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
+	"alaninnovates.com/hive-bot/guideplugin"
 	"alaninnovates.com/hive-bot/hiveplugin"
+	"alaninnovates.com/hive-bot/miscplugin"
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -27,9 +29,9 @@ func main() {
 	}
 
 	var (
-		token   = os.Getenv("TOKEN")
-		guildID = snowflake.GetEnv("GUILD_ID")
-		dbUri   = os.Getenv("MONGODB_URI")
+		token = os.Getenv("TOKEN")
+		_     = snowflake.GetEnv("GUILD_ID")
+		dbUri = os.Getenv("MONGODB_URI")
 	)
 
 	hiveBot := &common.Bot{
@@ -51,6 +53,8 @@ func main() {
 	h := handler.New(logger)
 	gameplugin.Initialize(h, hiveBot)
 	hiveplugin.Initialize(h, hiveBot)
+	guideplugin.Initialize(h, hiveBot)
+	miscplugin.Initialize(h, hiveBot)
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),
@@ -60,7 +64,7 @@ func main() {
 		logger.Fatal("Failed to create disgo client: ", err)
 	}
 
-	h.SyncCommands(hiveBot.Client, guildID)
+	h.SyncCommands(hiveBot.Client)
 
 	if err = hiveBot.Client.OpenGateway(context.TODO()); err != nil {
 		logger.Fatal("Failed to open gateway: ", err)

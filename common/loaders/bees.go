@@ -3,34 +3,47 @@ package loaders
 import (
 	"github.com/fogleman/gg"
 	"image"
-	"io/fs"
-	"os"
-	"strings"
+	"sort"
 )
 
-func GetBeeImage(name string) image.Image {
-	gd := gg.NewContext(80, 80)
-	img, err := gg.LoadImage("assets/bees/" + name + ".png")
+func GetBee(id string) (image.Image, BeeMeta) {
+	img, err := gg.LoadImage(bees[id].Path)
+	dc := gg.NewContext(42, 42)
+	dc.Scale(0.12, 0.12)
+	dc.DrawImage(img, -20, -20)
 	if err != nil {
 		panic(err)
 	}
-	gd.Scale(0.65, 0.65)
-	gd.DrawImage(img, 0, 0)
-	return gd.Image()
+	return dc.Image(), bees[id]
 }
 
-func GetBees() []string {
-	var files []string
-	dir, _ := os.Open("assets/bees")
-	defer dir.Close()
-	fileInfos, err := dir.ReadDir(-1)
-	if err != nil {
-		panic(err)
-	}
-	for _, fi := range fileInfos {
-		if fi.Type() == fs.FileMode(0) {
-			files = append(files, strings.Split(fi.Name(), ".")[0])
+func GetBeeName(id string) string {
+	return bees[id].Name
+}
+
+func GetBeeId(name string) string {
+	for k, v := range bees {
+		if v.Name == name {
+			return k
 		}
 	}
-	return files
+	return ""
+}
+
+func GetBeeIds() []string {
+	beeIds := make([]string, 0)
+	for k := range bees {
+		beeIds = append(beeIds, k)
+	}
+	sort.Strings(beeIds)
+	return beeIds
+}
+
+func GetBeeNames() []string {
+	beeNames := make([]string, 0)
+	for _, v := range bees {
+		beeNames = append(beeNames, v.Name)
+	}
+	sort.Strings(beeNames)
+	return beeNames
 }

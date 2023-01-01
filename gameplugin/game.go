@@ -6,8 +6,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
-	"image"
-	"image/png"
+	"github.com/fogleman/gg"
 	"io"
 	"math/rand"
 	"strconv"
@@ -21,27 +20,35 @@ type AnswerChoice struct {
 
 func GetAnswerSet() ([]AnswerChoice, int) {
 	var answerSet []AnswerChoice
-	bees := loaders.GetBees()
-	correctI := rand.Intn(4)
-	for i := 0; i < 4; i++ {
+	answersChose := make(map[string]int)
+	bees := loaders.GetBeeNames()
+	correctDone := false
+	correctI := 0
+	for i := 0; i < 4; {
 		randomIndex := rand.Intn(len(bees))
+		if _, found := answersChose[bees[randomIndex]]; found {
+			continue
+		}
+		correct := false
+		if !correctDone && rand.Intn(2) == 1 {
+			correct = true
+			correctDone = true
+			correctI = i
+		}
 		answerSet = append(answerSet, AnswerChoice{
 			Name:      bees[randomIndex],
-			IsCorrect: i == correctI,
+			IsCorrect: correct,
 		})
+		answersChose[bees[randomIndex]] = 1
+		i++
 	}
 	return answerSet, correctI
 }
 
 func GetAnswerSetButtons(userId string) ([]discord.InteractiveComponent, io.Reader) {
 	answerSet, correctI := GetAnswerSet()
-	r, w := io.Pipe()
-	go func(i image.Image) {
-		defer w.Close()
-		if err := png.Encode(w, i); err != nil {
-			panic(err)
-		}
-	}(loaders.GetBeeImage(answerSet[correctI].Name))
+	img, _ := gg.LoadImage("assets/bees/" + answerSet[correctI].Name + ".png")
+	r := common.ImageToPipe(img)
 	buttons := make([]discord.InteractiveComponent, 0)
 	for i, answer := range answerSet {
 		id := ""
@@ -66,7 +73,7 @@ func GameCommand(b *common.Bot, gameService *State) handler.Command {
 			Description: "Play games",
 			Options: []discord.ApplicationCommandOption{
 				discord.ApplicationCommandOptionSubCommand{
-					Name:        "identify",
+					Name:        "identify-the-bee",
 					Description: "Play a game of identify-the-bee",
 					Options: []discord.ApplicationCommandOption{
 						discord.ApplicationCommandOptionInt{
@@ -79,7 +86,7 @@ func GameCommand(b *common.Bot, gameService *State) handler.Command {
 			},
 		},
 		CommandHandlers: map[string]handler.CommandHandler{
-			"identify": func(event *events.ApplicationCommandInteractionCreate) error {
+			"identify-the-bee": func(event *events.ApplicationCommandInteractionCreate) error {
 				data := event.SlashCommandInteractionData()
 				questions, ok := data.OptInt("questions")
 				if !ok {
@@ -141,7 +148,7 @@ func TriviaSummary(event *events.ComponentInteractionCreate, gameService *State)
 		Embeds: []discord.Embed{
 			{
 				Title:       "Trivia Summary",
-				Description: "You got " + strconv.Itoa(user.Correct) + " correct out of " + strconv.Itoa(user.QuestionsAnswered()),
+				Description: "You got " + strconv.Itoa(user.Correct) + " out of " + strconv.Itoa(user.QuestionsAnswered()) + " questions correct!",
 			},
 		},
 	})
