@@ -44,17 +44,17 @@ func (h *Hive) ToBson() bson.D {
 
 var (
 	slotColor = "#7d5a2f"
-	bgColor   = "#ba8441"
+	bgColor   = "#E0B153"
 	offsetX   = 18
 	offsetY   = 15
 )
 
 func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
-	dc.SetHexColor(bgColor)
-	dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
+	//dc.SetHexColor(bgColor)
+	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()
 	bottom := dc.Height()
-	postProcessFuncs := make([]func(), 0)
+	postProcessFuncs := make([]map[string]func(), 0)
 	for i := 0; i < 10; i++ {
 		bottomCnt := 0
 		topCnt := 0
@@ -104,10 +104,10 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 		}
 	}
 	// add some credits
-	ff, _ := gg.LoadFontFace("assets/fonts/UniformRnd-Black.ttf", 40)
-	dc.SetFontFace(ff)
-	dc.SetColor(color.White)
-	dc.DrawStringAnchored("Hive Builder Bot", float64(dc.Width()/2), 50, 0.5, 0)
+	//ff, _ := gg.LoadFontFace("assets/fonts/UniformRnd-Black.ttf", 40)
+	//dc.SetFontFace(ff)
+	//dc.SetColor(color.White)
+	//dc.DrawStringAnchored("Hive Builder", float64(dc.Width()/2), 50, 0.5, 0)
 	// simulate "layers" with post-processing functions
 	dd := gg.NewContext(410, 950)
 	err := dc.SetMask(dd.AsMask())
@@ -115,9 +115,17 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 		panic(err)
 	}
 	dc.InvertMask()
-	ff, _ = gg.LoadFontFace("assets/fonts/Roboto-Bold.ttf", 30)
-	dc.SetFontFace(ff)
-	for _, f := range postProcessFuncs {
-		f()
+	normalFont, _ := gg.LoadFontFace("assets/fonts/Roboto-Bold.ttf", 30)
+	dc.SetFontFace(normalFont)
+	for i := 0; i < 3; i++ {
+		for _, f := range postProcessFuncs {
+			if i == 0 {
+				f["gifted"]()
+			} else if i == 1 {
+				f["beequip"]()
+			} else if i == 2 {
+				f["level"]()
+			}
+		}
 	}
 }

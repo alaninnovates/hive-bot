@@ -37,6 +37,10 @@ func (b *Bee) SetMutation(mutation string) {
 	b.mutation = mutation
 }
 
+func (b *Bee) SetLevel(level int) {
+	b.level = level
+}
+
 func (b *Bee) ToBson() bson.D {
 	return bson.D{
 		{"id", b.id},
@@ -47,13 +51,7 @@ func (b *Bee) ToBson() bson.D {
 	}
 }
 
-func (b *Bee) Draw(dc *gg.Context, x int, y int) func() {
-	if b.gifted {
-		dc.SetLineWidth(4)
-		dc.SetHexColor("#ffff00")
-		dc.DrawRegularPolygon(6, float64(x), float64(y), 42, 0)
-		dc.Stroke()
-	}
+func (b *Bee) Draw(dc *gg.Context, x int, y int) map[string]func() {
 	face, beeMeta := loaders.GetBee(b.id)
 	switch beeMeta.Kind {
 	case loaders.Common:
@@ -72,11 +70,37 @@ func (b *Bee) Draw(dc *gg.Context, x int, y int) func() {
 	dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 	dc.Fill()
 	dc.DrawImageAnchored(face, x, y, 0.5, 0.5)
-	return func() {
-		dc.SetHexColor(loaders.GetMutation(b.mutation))
-		dc.DrawStringAnchored(strconv.Itoa(b.level), float64(x-60), float64(y-10), 0, 0.5)
+	funcs := make(map[string]func())
+	funcs["gifted"] = func() {
+		if b.gifted {
+			dc.SetLineWidth(4)
+			dc.SetHexColor("#ffff00")
+			dc.DrawRegularPolygon(6, float64(x), float64(y), 42, 0)
+			dc.Stroke()
+		}
+	}
+	funcs["beequip"] = func() {
 		if b.beequip != "" {
 			dc.DrawImageAnchored(loaders.GetBeequipImage(b.beequip), x+15, y+15, 0.5, 0)
 		}
 	}
+	funcs["level"] = func() {
+		if b.level != 0 {
+			dc.SetHexColor("#000000")
+			n := 3
+			for dy := -n; dy <= n; dy++ {
+				for dx := -n; dx <= n; dx++ {
+					if dx*dx+dy*dy >= n*n {
+						continue
+					}
+					xx := float64(x - 60 + dx)
+					yy := float64(y - 10 + dy)
+					dc.DrawStringAnchored(strconv.Itoa(b.level), xx, yy, 0, 0.5)
+				}
+			}
+			dc.SetHexColor(loaders.GetMutation(b.mutation))
+			dc.DrawStringAnchored(strconv.Itoa(b.level), float64(x-60), float64(y-10), 0, 0.5)
+		}
+	}
+	return funcs
 }

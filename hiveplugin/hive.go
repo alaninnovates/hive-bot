@@ -6,16 +6,21 @@ import (
 	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
 	"fmt"
+	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
+	"github.com/disgoorg/json"
+	"github.com/disgoorg/snowflake/v2"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golang.org/x/exp/slices"
+	"io"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func GetRangeNumbers(rangeStr string) []int {
@@ -35,8 +40,32 @@ func GetRangeNumbers(rangeStr string) []int {
 	return nums
 }
 
-func HiveCommand(b *common.Bot) handler.Command {
-	hiveService := NewHiveService()
+var InvalidSlotsMessage = discord.MessageCreate{
+	Content: "Invalid slot range. Slots must be whole numbers between 1 and 50.",
+}
+
+func ValidateRange(rangeStr string, min int, max int) bool {
+	for _, num := range GetRangeNumbers(rangeStr) {
+		if num < min || num > max {
+			return false
+		}
+	}
+	return true
+}
+
+func RenderHiveImage(h *hive.Hive, showHiveNumbers bool) *io.PipeReader {
+	dc := gg.NewContext(410, 950)
+	h.Draw(dc, showHiveNumbers)
+	img := dc.Image()
+	bg, _ := gg.LoadImage("assets/bg.png")
+	hiveImage := gg.NewContextForImage(bg)
+	hiveImage.DrawImageAnchored(img, hiveImage.Width()/2, hiveImage.Height()/2, 0.5, 0.5)
+	tmImage, _ := gg.LoadPNG("assets/trademark.png")
+	hiveImage.DrawImageAnchored(tmImage, hiveImage.Width()/2, 8, 0.5, 0)
+	return common.ImageToPipe(hiveImage.Image())
+}
+
+func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 	return handler.Command{
 		Create: discord.SlashCommandCreate{
 			Name:        "hive",
@@ -63,8 +92,10 @@ func HiveCommand(b *common.Bot) handler.Command {
 						},
 						discord.ApplicationCommandOptionInt{
 							Name:        "level",
-							Description: "The level of the bee",
+							Description: "The level of the bee (0 = no level)",
 							Required:    true,
+							MinValue:    json.Ptr(0),
+							MaxValue:    json.Ptr(25),
 						},
 						discord.ApplicationCommandOptionBool{
 							Name:        "gifted",
@@ -87,6 +118,19 @@ func HiveCommand(b *common.Bot) handler.Command {
 				discord.ApplicationCommandOptionSubCommand{
 					Name:        "giftall",
 					Description: "Gift all bees in your hive",
+				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "setlevel",
+					Description: "Set the level of ALL your bees",
+					Options: []discord.ApplicationCommandOption{
+						discord.ApplicationCommandOptionInt{
+							Name:        "level",
+							Description: "The level you want to set your bees to",
+							Required:    true,
+							MinValue:    json.Ptr(0),
+							MaxValue:    json.Ptr(25),
+						},
+					},
 				},
 				discord.ApplicationCommandOptionSubCommand{
 					Name:        "setbeequip",
@@ -209,6 +253,9 @@ func HiveCommand(b *common.Bot) handler.Command {
 				if !exists {
 					gifted = false
 				}
+				if !ValidateRange(slots, 1, 50) {
+					return event.CreateMessage(InvalidSlotsMessage)
+				}
 				for _, slot := range GetRangeNumbers(slots) {
 					h.AddBee(hive.NewBee(level, loaders.GetBeeId(name), gifted), slot)
 				}
@@ -225,8 +272,11 @@ func HiveCommand(b *common.Bot) handler.Command {
 				}
 				data := event.SlashCommandInteractionData()
 				slots, _ := data.OptString("slots")
+				if !ValidateRange(slots, 1, 50) {
+					return event.CreateMessage(InvalidSlotsMessage)
+				}
 				for _, slot := range GetRangeNumbers(slots) {
-					h.RemoveBee(int(slot))
+					h.RemoveBee(slot)
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Removed bee(s) from hive.",
@@ -246,6 +296,22 @@ func HiveCommand(b *common.Bot) handler.Command {
 					Content: "Gifted all bees in hive.",
 				})
 			},
+			"setlevel": func(event *events.ApplicationCommandInteractionCreate) error {
+				h := hiveService.GetHive(event.User().ID)
+				if h == nil {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "You don't have a hive. Create one with the `/hive create` command.",
+					})
+				}
+				data := event.SlashCommandInteractionData()
+				level, _ := data.OptInt("level")
+				for _, bee := range h.GetBees() {
+					bee.SetLevel(level)
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Set level of all bees in hive to " + strconv.Itoa(level) + ".",
+				})
+			},
 			"setbeequip": func(event *events.ApplicationCommandInteractionCreate) error {
 				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
@@ -260,6 +326,9 @@ func HiveCommand(b *common.Bot) handler.Command {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "That beequip doesn't exist.",
 					})
+				}
+				if !ValidateRange(slots, 1, 50) {
+					return event.CreateMessage(InvalidSlotsMessage)
 				}
 				for _, slot := range GetRangeNumbers(slots) {
 					h.GetBee(slot).SetBeequip(name)
@@ -282,6 +351,9 @@ func HiveCommand(b *common.Bot) handler.Command {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "That mutation doesn't exist.",
 					})
+				}
+				if !ValidateRange(slots, 1, 50) {
+					return event.CreateMessage(InvalidSlotsMessage)
 				}
 				for _, slot := range GetRangeNumbers(slots) {
 					h.GetBee(slot).SetMutation(name)
@@ -322,17 +394,23 @@ func HiveCommand(b *common.Bot) handler.Command {
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
 					})
 				}
-				event.DeferCreateMessage(false)
+				err := event.DeferCreateMessage(false)
+				if err != nil {
+					return err
+				}
 				data := event.SlashCommandInteractionData()
 				showHiveNumbers, provided := data.OptBool("show_hive_numbers")
 				if !provided {
 					showHiveNumbers = true
 				}
-				dc := gg.NewContext(410, 950)
-				h.Draw(dc, showHiveNumbers)
-				img := dc.Image()
-				r := common.ImageToPipe(img)
-				_, err := b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+				r := RenderHiveImage(h, showHiveNumbers)
+				hn := ""
+				if showHiveNumbers {
+					hn = "1"
+				} else {
+					hn = "0"
+				}
+				_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
 					Embeds: &[]discord.Embed{
 						{
 							Title: event.User().Username + "'s Hive",
@@ -345,6 +423,13 @@ func HiveCommand(b *common.Bot) handler.Command {
 						{
 							Name:   "hive.png",
 							Reader: r,
+						},
+					},
+					Components: &[]discord.ContainerComponent{
+						discord.ActionRowComponent{
+							discord.NewPrimaryButton("Gift All", "handler:giftall:"+event.User().ID.String()+":"+hn),
+							//discord.NewPrimaryButton("Set Level All", "handler:setlevelall:"+event.User().ID.String()+":"+hn),
+							discord.NewSuccessButton("Hive Info", "handler:info:"+event.User().ID.String()),
 						},
 					},
 				})
@@ -528,6 +613,172 @@ func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCre
 	}
 }
 
+func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
+	return handler.Component{
+		Name:  "giftall",
+		Check: common.UserIDCheck(),
+		Handler: func(event *events.ComponentInteractionCreate) error {
+			err := event.DeferUpdateMessage()
+			if err != nil {
+				return err
+			}
+			data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
+			uid, shn := data[2], data[3]
+			userId, _ := snowflake.Parse(uid)
+			h := hiveService.GetHive(userId)
+			if h == nil {
+				return event.UpdateMessage(discord.MessageUpdate{
+					Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
+					Embeds:      &[]discord.Embed{},
+					Components:  &[]discord.ContainerComponent{},
+					Attachments: &[]discord.AttachmentUpdate{},
+				})
+			}
+			for _, b := range h.GetBees() {
+				b.SetGifted(true)
+			}
+			_, err = b.Client.Rest().CreateMessage(event.ChannelID(), discord.MessageCreate{
+				Content: "Gifted all bees in your hive!",
+			})
+			if err != nil {
+				b.Logger.Error(err)
+				return err
+			}
+			showHiveNumbers := false
+			if shn == "1" {
+				showHiveNumbers = true
+			} else if shn == "0" {
+				showHiveNumbers = false
+			}
+			r := RenderHiveImage(h, showHiveNumbers)
+			_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+				Files: []*discord.File{
+					{
+						Name:   "hive.png",
+						Reader: r,
+					},
+				},
+			})
+			return err
+		},
+	}
+}
+
+func SetLevelButton(b *common.Bot, hiveService *State) handler.Component {
+	return handler.Component{
+		Name:  "setlevelall",
+		Check: common.UserIDCheck(),
+		Handler: func(event *events.ComponentInteractionCreate) error {
+			go func() error {
+				data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
+				uid, shn := data[2], data[3]
+				userId, _ := snowflake.Parse(uid)
+				h := hiveService.GetHive(userId)
+				if h == nil {
+					return event.UpdateMessage(discord.MessageUpdate{
+						Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
+						Embeds:      &[]discord.Embed{},
+						Components:  &[]discord.ContainerComponent{},
+						Attachments: &[]discord.AttachmentUpdate{},
+					})
+				}
+				err := event.CreateMessage(discord.MessageCreate{
+					Content: "What level do you want to set your hive to?\nYou have 10 seconds to reply",
+				})
+				if err != nil {
+					b.Logger.Error(err)
+					return err
+				}
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer func() {
+					cancel()
+					println("cancelled")
+				}()
+				print("waiting for message")
+				level := 0
+				bot.WaitForEvent(b.Client, ctx,
+					func(e *events.MessageCreate) bool {
+						println(e.Message.Content)
+						return e.Message.Author.ID == event.User().ID
+					}, func(e *events.MessageCreate) {
+						println(e.Message.Content)
+						l, err := strconv.Atoi(e.Message.Content)
+						if err != nil || l < 0 || l > 25 {
+							_, _ = b.Client.Rest().CreateMessage(e.ChannelID, discord.MessageCreate{
+								Content: "Please input an integer between 0-25.",
+							})
+							return
+						}
+						level = l
+					}, func() {
+						println("timeout")
+					})
+				print("after: ", level)
+				for _, bee := range h.GetBees() {
+					bee.SetLevel(level)
+				}
+				showHiveNumbers := false
+				if shn == "1" {
+					showHiveNumbers = true
+				} else if shn == "0" {
+					showHiveNumbers = false
+				}
+				r := RenderHiveImage(h, showHiveNumbers)
+				_, err = b.Client.Rest().UpdateMessage(event.ChannelID(), event.Message.ID, discord.MessageUpdate{
+					Files: []*discord.File{
+						{
+							Name:   "hive.png",
+							Reader: r,
+						},
+					},
+				})
+				return err
+			}()
+			return nil
+		},
+	}
+}
+
+func HiveInfoButton(hiveService *State) handler.Component {
+	return handler.Component{
+		Name:  "info",
+		Check: common.UserIDCheck(),
+		Handler: func(event *events.ComponentInteractionCreate) error {
+			data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
+			uid := data[2]
+			userId, _ := snowflake.Parse(uid)
+			h := hiveService.GetHive(userId)
+			if h == nil {
+				return event.UpdateMessage(discord.MessageUpdate{
+					Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
+					Embeds:      &[]discord.Embed{},
+					Components:  &[]discord.ContainerComponent{},
+					Attachments: &[]discord.AttachmentUpdate{},
+				})
+			}
+			bees := make(map[string]int)
+			for _, bee := range h.GetBees() {
+				bees[bee.Name()]++
+			}
+			beesStr := ""
+			for name, count := range bees {
+				beesStr += fmt.Sprintf("%s: %d\n", name, count)
+			}
+			return event.CreateMessage(discord.MessageCreate{
+				Embeds: []discord.Embed{
+					{
+						Title:       "Hive Info",
+						Description: beesStr,
+						Color:       0x00FF00,
+					},
+				},
+			})
+		},
+	}
+}
+
 func Initialize(h *handler.Handler, b *common.Bot) {
-	h.AddCommands(HiveCommand(b))
+	hiveService := NewHiveService()
+	h.AddCommands(HiveCommand(b, hiveService))
+	h.AddComponents(GiftAllButton(b, hiveService), SetLevelButton(b, hiveService), HiveInfoButton(hiveService))
 }

@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/handler"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
@@ -58,7 +59,9 @@ func main() {
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),
-		bot.WithDefaultGateway(),
+		bot.WithGatewayConfigOpts(
+			gateway.WithIntents(gateway.IntentGuilds, gateway.IntentGuildMessages, gateway.IntentMessageContent),
+		),
 		bot.WithEventListeners(h),
 	); err != nil {
 		logger.Fatal("Failed to create disgo client: ", err)

@@ -6,6 +6,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
+	"github.com/disgoorg/json"
 	"github.com/fogleman/gg"
 	"io"
 	"math/rand"
@@ -47,6 +48,7 @@ func GetAnswerSet() ([]AnswerChoice, int) {
 
 func GetAnswerSetButtons(userId string) ([]discord.InteractiveComponent, io.Reader) {
 	answerSet, correctI := GetAnswerSet()
+	//fmt.Println("correctI: "+strconv.Itoa(correctI), answerSet[correctI].Name)
 	img, _ := gg.LoadImage("assets/bees/" + answerSet[correctI].Name + ".png")
 	r := common.ImageToPipe(img)
 	buttons := make([]discord.InteractiveComponent, 0)
@@ -80,6 +82,8 @@ func GameCommand(b *common.Bot, gameService *State) handler.Command {
 							Name:        "questions",
 							Description: "Number of questions to answer",
 							Required:    false,
+							MinValue:    json.Ptr(5),
+							MaxValue:    json.Ptr(25),
 						},
 					},
 				},
