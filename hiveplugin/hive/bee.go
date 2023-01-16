@@ -18,7 +18,7 @@ type Bee struct {
 
 func NewBee(level int, id string, gifted bool) *Bee {
 	_, meta := loaders.GetBee(id)
-	return &Bee{level, id, meta.Name, gifted, "", "None"}
+	return &Bee{level, id, meta.Name, gifted, "None", "None"}
 }
 
 func (b *Bee) Name() string {
@@ -51,7 +51,7 @@ func (b *Bee) ToBson() bson.D {
 	}
 }
 
-func (b *Bee) Draw(dc *gg.Context, x int, y int) map[string]func() {
+func DrawBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
 	face, beeMeta := loaders.GetBee(b.id)
 	switch beeMeta.Kind {
 	case loaders.Common:
@@ -80,7 +80,7 @@ func (b *Bee) Draw(dc *gg.Context, x int, y int) map[string]func() {
 		}
 	}
 	funcs["beequip"] = func() {
-		if b.beequip != "" {
+		if b.beequip != "None" {
 			dc.DrawImageAnchored(loaders.GetBeequipImage(b.beequip), x+15, y+15, 0.5, 0)
 		}
 	}

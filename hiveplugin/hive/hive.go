@@ -49,7 +49,7 @@ var (
 	offsetY   = 15
 )
 
-func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
+func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool) {
 	//dc.SetHexColor(bgColor)
 	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()
@@ -67,7 +67,7 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 				dc.SetHexColor(slotColor)
 				dc.Fill()
 				if bee != nil {
-					postProcessFuncs = append(postProcessFuncs, bee.Draw(dc, x, y))
+					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)
@@ -87,7 +87,7 @@ func (h *Hive) Draw(dc *gg.Context, showHiveNumbers bool) {
 				dc.SetHexColor(slotColor)
 				dc.Fill()
 				if bee != nil {
-					postProcessFuncs = append(postProcessFuncs, bee.Draw(dc, x, y))
+					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)

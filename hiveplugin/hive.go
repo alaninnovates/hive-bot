@@ -55,7 +55,7 @@ func ValidateRange(rangeStr string, min int, max int) bool {
 
 func RenderHiveImage(h *hive.Hive, showHiveNumbers bool) *io.PipeReader {
 	dc := gg.NewContext(410, 950)
-	h.Draw(dc, showHiveNumbers)
+	hive.DrawHive(h, dc, showHiveNumbers)
 	img := dc.Image()
 	bg, _ := gg.LoadImage("assets/bg.png")
 	hiveImage := gg.NewContextForImage(bg)
@@ -322,7 +322,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				data := event.SlashCommandInteractionData()
 				slots, _ := data.OptString("slots")
 				name, _ := data.OptString("name")
-				if !slices.Contains(loaders.GetBeequips(), name) {
+				if !(slices.Contains(loaders.GetBeequips(), name) || name == "None") {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "That beequip doesn't exist.",
 					})
@@ -452,7 +452,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				userSaveCount, _ := b.Db.Collection("hives").CountDocuments(context.Background(), bson.M{"user_id": event.User().ID})
 				if int(userSaveCount) >= common.MaxFreeSaves {
 					return event.CreateMessage(discord.MessageCreate{
-						Content: "You have reached the maximum number of free saves. You can get more saves by donating.",
+						Content: "You have reached the maximum number of free saves.",
 					})
 				}
 				res, err := b.Db.Collection("hives").UpdateOne(context.Background(), bson.M{
@@ -510,8 +510,8 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					gifted := be.Map()["gifted"].(bool)
 					beequip, ok := be.Map()["beequip"].(string)
 					mutation, ok2 := be.Map()["mutation"].(string)
-					if !ok {
-						beequip = ""
+					if !ok || beequip == "" {
+						beequip = "None"
 					}
 					if !ok2 {
 						mutation = "None"
@@ -585,7 +585,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 		},
 		AutocompleteHandlers: map[string]handler.AutocompleteHandler{
 			"add":         makeAutocompleteHandler(loaders.GetBeeNames()),
-			"setbeequip":  makeAutocompleteHandler(loaders.GetBeequips()),
+			"setbeequip":  makeAutocompleteHandler(append(loaders.GetBeequips(), "None")),
 			"setmutation": makeAutocompleteHandler(loaders.GetMutations()),
 		},
 	}
@@ -593,7 +593,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 
 func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCreate) error {
 	return func(event *events.AutocompleteInteractionCreate) error {
-		name, _ := event.Data.OptString("name")
+		name := event.Data.String("name")
 		name = strings.ToLower(name)
 		matches := make([]discord.AutocompleteChoice, 0)
 		i := 0
@@ -637,13 +637,10 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 			for _, b := range h.GetBees() {
 				b.SetGifted(true)
 			}
-			_, err = b.Client.Rest().CreateMessage(event.ChannelID(), discord.MessageCreate{
+			// ignore errors
+			_, _ = b.Client.Rest().CreateMessage(event.ChannelID(), discord.MessageCreate{
 				Content: "Gifted all bees in your hive!",
 			})
-			if err != nil {
-				b.Logger.Error(err)
-				return err
-			}
 			showHiveNumbers := false
 			if shn == "1" {
 				showHiveNumbers = true
