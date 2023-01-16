@@ -3,6 +3,7 @@ package gameplugin
 import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/common/loaders"
+	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
@@ -49,7 +50,18 @@ func GetAnswerSet() ([]AnswerChoice, int) {
 func GetAnswerSetButtons(userId string) ([]discord.InteractiveComponent, io.Reader) {
 	answerSet, correctI := GetAnswerSet()
 	//fmt.Println("correctI: "+strconv.Itoa(correctI), answerSet[correctI].Name)
-	img, _ := gg.LoadImage("assets/bees/" + answerSet[correctI].Name + ".png")
+	img, err := gg.LoadImage("assets/bees/" + answerSet[correctI].Name + ".png")
+	if err != nil {
+		fmt.Println(err, answerSet[correctI].Name)
+		img, _ = gg.LoadImage("assets/error.png")
+		return []discord.InteractiveComponent{
+			discord.ButtonComponent{
+				Label:    answerSet[correctI].Name,
+				Style:    discord.ButtonStylePrimary,
+				CustomID: "error",
+			},
+		}, common.ImageToPipe(img)
+	}
 	r := common.ImageToPipe(img)
 	buttons := make([]discord.InteractiveComponent, 0)
 	for i, answer := range answerSet {

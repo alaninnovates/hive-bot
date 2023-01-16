@@ -1,6 +1,7 @@
 package common
 
 import (
+	"fmt"
 	"image"
 	"image/png"
 	"io"
@@ -11,7 +12,7 @@ func ImageToPipe(image image.Image) *io.PipeReader {
 	go func() {
 		defer w.Close()
 		if err := png.Encode(w, image); err != nil {
-			panic(err)
+			fmt.Println(err)
 		}
 	}()
 	return r

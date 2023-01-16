@@ -68,6 +68,7 @@ var bees = map[string]BeeMeta{
 	"bear":      b("bear", Event),
 	"cobalt":    b("cobalt", Event),
 	"crimson":   b("crimson", Event),
+	"digital":   b("digital", Event),
 	"festive":   b("festive", Event),
 	"gummy":     b("gummy", Event),
 	"photon":    b("photon", Event),
