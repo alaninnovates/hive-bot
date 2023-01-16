@@ -10,6 +10,7 @@ import (
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/handler"
 	"github.com/disgoorg/log"
@@ -60,7 +61,10 @@ func main() {
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),
 		bot.WithGatewayConfigOpts(
-			gateway.WithIntents(gateway.IntentGuilds, gateway.IntentGuildMessages, gateway.IntentMessageContent),
+			gateway.WithIntents(gateway.IntentGuilds),
+		),
+		bot.WithCacheConfigOpts(
+			cache.WithCaches(cache.FlagGuilds),
 		),
 		bot.WithEventListeners(h),
 	); err != nil {
