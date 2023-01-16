@@ -21,19 +21,19 @@ var helpMenus = map[string]discord.Embed{
 	"hive": {
 		Title: ":honey_pot: Hive building",
 		Description: `
-			▸ /hive create
-			▸ /hive add <name> <slots> <level> [gifted]
-			▸ /hive remove <slots>
-			▸ /hive setmutation <slots> <name>
-			▸ /hive setbeequip <slots> <name>
-			▸ /hive giftall
-			▸ /hive setlevel <level>
-			▸ /hive view [show_hive_numbers]
-			▸ /hive info
-			▸ /hive save <name>
-			▸ /hive saves list
-			▸ /hive saves load <id>
-			▸ /hive saves delete <id>
+			▸ </hive create:1053476146978758666>
+			▸ </hive add:1053476146978758666> <name> <slots> <level> [gifted]
+			▸ </hive remove:1053476146978758666> <slots>
+			▸ </hive setmutation:1053476146978758666> <slots> <name>
+			▸ </hive setbeequip:1053476146978758666> <slots> <name>
+			▸ </hive giftall:1053476146978758666>
+			▸ </hive setlevel:1053476146978758666> <level>
+			▸ </hive view:1053476146978758666> [show_hive_numbers]
+			▸ </hive info:1053476146978758666>
+			▸ </hive save:1053476146978758666> <name>
+			▸ </hive saves list:1053476146978758666>
+			▸ </hive saves load:1053476146978758666> <id>
+			▸ </hive saves delete:1053476146978758666> <id>
 
 			[] = Optional | <> = Required`,
 		Color: 0xfcba03,
@@ -42,7 +42,7 @@ var helpMenus = map[string]discord.Embed{
 		Title: ":video_game: Games",
 		Description: `Note: More games are coming in the future!
 
-			▸ /game identify-the-bee
+			▸ </game identify-the-bee:1053476146978758667>
 
 			[] = Optional | <> = Required`,
 		Color: 0x03b1fc,
@@ -51,7 +51,7 @@ var helpMenus = map[string]discord.Embed{
 		Title: ":bee: Guides",
 		Description: `Note: More guides are coming in the future!
 
-			▸ /guides hive
+			▸ </guides hive:1055875239281688576>
 
 			[] = Optional | <> = Required`,
 		Color: 0x03fc73,
