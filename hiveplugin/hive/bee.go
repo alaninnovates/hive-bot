@@ -25,6 +25,10 @@ func (b *Bee) Name() string {
 	return b.name
 }
 
+func (b *Bee) Beequip() string {
+	return b.beequip
+}
+
 func (b *Bee) SetGifted(state bool) {
 	b.gifted = state
 }
@@ -87,6 +91,7 @@ func DrawBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
 	funcs["level"] = func() {
 		if b.level != 0 {
 			dc.SetHexColor("#000000")
+			//todo: figure out what this is doing and if its the actual cause of cpu spikes
 			n := 3
 			for dy := -n; dy <= n; dy++ {
 				for dx := -n; dx <= n; dx++ {

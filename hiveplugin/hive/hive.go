@@ -49,7 +49,7 @@ var (
 	offsetY   = 15
 )
 
-func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool) {
+func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool) {
 	//dc.SetHexColor(bgColor)
 	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()
@@ -59,25 +59,39 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool) {
 		bottomCnt := 0
 		topCnt := 0
 		for j := 0; j < 5; j++ {
-			bee := h.bees[i*5+j+1]
+			hiveNumber := i*5 + j + 1
+			bee := h.bees[hiveNumber]
+			var hiveNumFunc func()
 			if j%2 == 0 {
 				x := bottomCnt*46*3 + 50 + offsetX
 				y := bottom - (i*80 + 50) - offsetY
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
 				dc.Fill()
+				hiveNumFunc = func() {
+					if bee != nil && slotsOnTop {
+						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 30)
+						dc.SetFontFace(ff)
+						dc.SetColor(color.White)
+					} else {
+						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 20)
+						dc.SetFontFace(ff)
+						dc.SetColor(color.Black)
+					}
+					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
+				}
 				if bee != nil {
 					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)
 					dc.Fill()
-					if showHiveNumbers {
-						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 20)
-						dc.SetFontFace(ff)
-						dc.SetColor(color.Black)
-						dc.DrawStringAnchored(strconv.Itoa(i*5+j+1), float64(x), float64(y), 0.5, 0.5)
+					if showHiveNumbers && !slotsOnTop {
+						hiveNumFunc()
 					}
+				}
+				if slotsOnTop {
+					hiveNumFunc()
 				}
 				bottomCnt++
 			} else {
@@ -86,18 +100,30 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool) {
 				dc.DrawRegularPolygon(6, float64(x), float64(y), 50, 0)
 				dc.SetHexColor(slotColor)
 				dc.Fill()
+				hiveNumFunc = func() {
+					if bee != nil && slotsOnTop {
+						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 30)
+						dc.SetFontFace(ff)
+						dc.SetColor(color.White)
+					} else {
+						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 20)
+						dc.SetFontFace(ff)
+						dc.SetColor(color.Black)
+					}
+					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
+				}
 				if bee != nil {
 					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)
 					dc.Fill()
-					if showHiveNumbers {
-						ff, _ := gg.LoadFontFace("assets/fonts/Roboto-Regular.ttf", 20)
-						dc.SetFontFace(ff)
-						dc.SetColor(color.Black)
-						dc.DrawStringAnchored(strconv.Itoa(i*5+j+1), float64(x), float64(y), 0.5, 0.5)
+					if showHiveNumbers && !slotsOnTop {
+						hiveNumFunc()
 					}
+				}
+				if slotsOnTop {
+					hiveNumFunc()
 				}
 				topCnt++
 			}
