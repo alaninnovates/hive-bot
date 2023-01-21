@@ -71,10 +71,7 @@ func HelpCommand(b *common.Bot) handler.Command {
 						helpMenus["home"],
 					},
 					Components: []discord.ContainerComponent{
-						discord.ActionRowComponent{
-							discord.NewLinkButton("Documentation", "https://hive-builder.alaninnovates.com/"),
-							discord.NewLinkButton("Support server", "https://discord.gg/hive-builder-community-995988457136603147"),
-						},
+						common.LinksActionRow,
 						discord.ActionRowComponent{
 							discord.NewStringSelectMenu(
 								"handler:help",
@@ -156,6 +153,9 @@ func StatsCommand(b *common.Bot) handler.Command {
 								Text: "Made by alaninnovates#0123",
 							},
 						},
+					},
+					Components: []discord.ContainerComponent{
+						common.LinksActionRow,
 					},
 				})
 			},

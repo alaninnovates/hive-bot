@@ -29,10 +29,17 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to load .env: ", err)
 	}
+	devMode := false
+	if os.Getenv("DEV_MODE") == "true" {
+		devMode = true
+		err = godotenv.Overload(".env.dev")
+		if err != nil {
+			logger.Fatal("Failed to load .env.dev: ", err)
+		}
+	}
 
 	var (
 		token = os.Getenv("TOKEN")
-		_     = snowflake.GetEnv("GUILD_ID")
 		dbUri = os.Getenv("MONGODB_URI")
 	)
 
@@ -71,7 +78,11 @@ func main() {
 		logger.Fatal("Failed to create disgo client: ", err)
 	}
 
-	h.SyncCommands(hiveBot.Client)
+	if devMode {
+		h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
+	} else {
+		h.SyncCommands(hiveBot.Client)
+	}
 
 	if err = hiveBot.Client.OpenGateway(context.TODO()); err != nil {
 		logger.Fatal("Failed to open gateway: ", err)
