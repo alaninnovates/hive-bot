@@ -3,14 +3,16 @@ package adminplugin
 import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
+	"alaninnovates.com/hive-bot/hiveplugin"
 	"context"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"strconv"
 )
 
-func AdminCommand(b *common.Bot) handler.Command {
+func AdminCommand(b *common.Bot, hiveService *hiveplugin.State) handler.Command {
 	return handler.Command{
 		Create: discord.SlashCommandCreate{
 			Name:        "admin",
@@ -68,6 +70,10 @@ func AdminCommand(b *common.Bot) handler.Command {
 						},
 					},
 				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "active-hives",
+					Description: "List the number of active, cached hives",
+				},
 			},
 		},
 		CommandHandlers: map[string]handler.CommandHandler{
@@ -105,10 +111,13 @@ func AdminCommand(b *common.Bot) handler.Command {
 				}
 				return event.CreateMessage(discord.MessageCreate{Content: "ok"})
 			},
+			"active-hives": func(event *events.ApplicationCommandInteractionCreate) error {
+				return event.CreateMessage(discord.MessageCreate{Content: strconv.Itoa(hiveService.HiveCount())})
+			},
 		},
 	}
 }
 
-func Initialize(h *handler.Handler, b *common.Bot) {
-	h.AddCommands(AdminCommand(b))
+func Initialize(h *handler.Handler, b *common.Bot, hiveService *hiveplugin.State) {
+	h.AddCommands(AdminCommand(b, hiveService))
 }

@@ -62,11 +62,12 @@ func main() {
 
 	h := handler.New(logger)
 	gameplugin.Initialize(h, hiveBot)
-	hiveplugin.Initialize(h, hiveBot)
+	hiveService := hiveplugin.NewHiveService()
+	hiveplugin.Initialize(h, hiveBot, hiveService)
 	guideplugin.Initialize(h, hiveBot)
 	miscplugin.Initialize(h, hiveBot)
 	if devMode {
-		adminplugin.Initialize(h, hiveBot)
+		adminplugin.Initialize(h, hiveBot, hiveService)
 	}
 
 	if hiveBot.Client, err = disgo.New(token,

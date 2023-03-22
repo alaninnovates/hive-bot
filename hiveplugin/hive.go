@@ -956,8 +956,7 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 	}
 }
 
-func Initialize(h *handler.Handler, b *common.Bot) {
-	hiveService := NewHiveService()
+func Initialize(h *handler.Handler, b *common.Bot, hiveService *State) {
 	h.AddCommands(HiveCommand(b, hiveService))
 	h.AddComponents(AddBeeButton(b), GiftAllButton(b, hiveService), SetLevelButton(),
 		HiveInfoButton(hiveService), SaveIdButton(), HiveRerenderButton(b, hiveService))
