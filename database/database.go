@@ -16,9 +16,25 @@ type Database struct {
 
 type UserHive struct {
 	ID     primitive.ObjectID `bson:"_id"`
-	UserId string             `bson:"user_id"`
+	UserId int64              `bson:"user_id"`
 	Name   string
 	Bees   map[int]*hive.Bee
+}
+
+type TriviaQuestion struct {
+	ID         primitive.ObjectID `bson:"_id"`
+	Difficulty int
+	Question   string
+	Answer     string
+	Incorrect  []string
+}
+
+type LeaderboardUser struct {
+	UserId        int64 `bson:"user_id"`
+	Username      string
+	Discriminator string
+	TriviaPoints  int   `bson:"trivia_points"`
+	BubbleTime    int64 `bson:"bubble_time"`
 }
 
 func NewDatabase() *Database {
