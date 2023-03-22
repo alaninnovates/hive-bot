@@ -128,9 +128,7 @@ func StatsCommand(b *common.Bot) handler.Command {
 		CommandHandlers: map[string]handler.CommandHandler{
 			"": func(event *events.ApplicationCommandInteractionCreate) error {
 				members := 0
-				guilds := 0
 				b.Client.Caches().GuildsForEach(func(e discord.Guild) {
-					guilds++
 					members += e.MemberCount
 				})
 				return event.CreateMessage(discord.MessageCreate{
@@ -140,7 +138,7 @@ func StatsCommand(b *common.Bot) handler.Command {
 							Fields: []discord.EmbedField{
 								{
 									Name:   "Guilds",
-									Value:  strconv.Itoa(guilds),
+									Value:  strconv.Itoa(b.Client.Caches().GuildsLen()),
 									Inline: json.Ptr(true),
 								},
 								{
