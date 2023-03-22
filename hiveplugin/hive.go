@@ -74,6 +74,17 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					Description: "Start building your hive",
 				},
 				discord.ApplicationCommandOptionSubCommand{
+					Name:        "import",
+					Description: "Import a hive from Natro Macro Hive Generation",
+					Options: []discord.ApplicationCommandOption{
+						discord.ApplicationCommandOptionString{
+							Name:        "input",
+							Description: "The output from the Natro Macro Hive Generation",
+							Required:    true,
+						},
+					},
+				},
+				discord.ApplicationCommandOptionSubCommand{
 					Name:        "add",
 					Description: "Add a bee to your hive",
 					Options: []discord.ApplicationCommandOption{
@@ -237,6 +248,27 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					Content: "Created new hive. You can now add bees with the `/hive add` command.",
 				})
 			},
+			"import": func(event *events.ApplicationCommandInteractionCreate) error {
+				data := event.SlashCommandInteractionData()
+				jsonData := data.String("input")
+				if !ValidateHiveJson(jsonData) {
+					return event.CreateMessage(discord.MessageCreate{
+						Content: "Invalid hive input. Please make sure the data is exactly what is outputted by Natro.",
+					})
+				}
+				parsedJson := ParseHiveJson(jsonData)
+				h := hiveService.CreateHive(event.User().ID)
+				slotNum := 1
+				for beeName, beeData := range parsedJson {
+					for i := 0; i < beeData.Amount; i++ {
+						h.AddBee(hive.NewBee(0, beeName, beeData.Gifted), slotNum)
+						slotNum++
+					}
+				}
+				return event.CreateMessage(discord.MessageCreate{
+					Content: "Imported hive.",
+				})
+			},
 			"add": func(event *events.ApplicationCommandInteractionCreate) error {
 				h := hiveService.GetHive(event.User().ID)
 				if h == nil {
@@ -245,10 +277,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					})
 				}
 				data := event.SlashCommandInteractionData()
-				name, _ := data.OptString("name")
-				if !slices.Contains(loaders.GetBeeNames(), name) {
+				name := getBeeFromAbbr(data.String("name"))
+				if name == "" {
 					return event.CreateMessage(discord.MessageCreate{
-						Content: "That bee doesn't exist.",
+						Content: "Invalid bee name.",
 					})
 				}
 				slots, _ := data.OptString("slots")
@@ -439,6 +471,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							discord.NewPrimaryButton("Gift All", "handler:giftall:"+event.User().ID.String()+":"+hn),
 							discord.NewPrimaryButton("Set Level All", "handler:setlevelbutton:"+event.User().ID.String()),
 							discord.NewSuccessButton("Hive Info", "handler:info:"+event.User().ID.String()),
+							discord.NewSecondaryButton("Rerender Hive", "handler:rerender:"+event.User().ID.String()),
 						},
 					},
 				})
@@ -872,98 +905,61 @@ func SaveIdButton() handler.Component {
 	}
 }
 
-func HiveRerenderCommand(b *common.Bot, hiveService *State) handler.Command {
-	return handler.Command{
-		Create: discord.MessageCommandCreate{
-			Name: "Rerender Hive",
-		},
-		Check: func(event *events.ApplicationCommandInteractionCreate) bool {
-			message := event.MessageCommandInteractionData().TargetMessage()
-			retVal := true
-			if message.Author.ID != b.Client.ApplicationID() || len(message.Embeds) == 0 || len(message.Components) != 1 {
-				retVal = false
-			}
-			if retVal {
-				comp := message.Components[0].Components()[0]
-				if comp.Type() != discord.ComponentTypeButton ||
-					strings.Contains(comp.(discord.ButtonComponent).CustomID, "handler:giftall") {
-					retVal = false
-				}
-				userId := strings.Split(comp.(discord.ButtonComponent).CustomID, ":")[2]
-				retVal = userId == event.User().ID.String()
-			}
-			if !retVal {
-				err := event.CreateMessage(discord.NewMessageCreateBuilder().
-					SetContent("You can only rerender your own hive!").
-					SetEphemeral(true).
-					Build())
-				if err != nil {
-					return false
-				}
-			}
-			//not sure if this works or not. might require channel/role cache
-			//if chann, err := event.Channel(); err == false {
-			//	if b.Client.Caches().MemberPermissionsInChannel(chann, event.Member().Member).Missing(discord.PermissionSendMessages) {
-			//		err := event.CreateMessage(discord.NewMessageCreateBuilder().
-			//			SetContent("The bot doesn't permission to send messages in this channel!").
-			//			SetEphemeral(true).
-			//			Build())
-			//		if err != nil {
-			//			return false
-			//		}
-			//		retVal = false
-			//	}
-			//}
-			return retVal
-		},
-		CommandHandlers: map[string]handler.CommandHandler{
-			"": func(event *events.ApplicationCommandInteractionCreate) error {
-				err := event.DeferCreateMessage(false)
-				if err != nil {
-					return err
-				}
-				message := event.MessageCommandInteractionData().TargetMessage()
-				userId := event.User().ID
-				h := hiveService.GetHive(userId)
-				if h == nil {
-					_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-						Content: json.Ptr("Failed to find hive. Create a new one with `/hive create`"),
-					})
-					return err
-				}
-				r := RenderHiveImage(h, true, false)
-				_, err = b.Client.Rest().UpdateMessage(message.ChannelID, message.ID, discord.MessageUpdate{
-					Files: []*discord.File{
-						{
-							Name:   "hive.png",
-							Reader: r,
-						},
-					},
+func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
+	return handler.Component{
+		Name:  "rerender",
+		Check: common.UserIDCheck(),
+		Handler: func(event *events.ComponentInteractionCreate) error {
+			data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
+			uid := data[2]
+			userId, _ := snowflake.Parse(uid)
+			h := hiveService.GetHive(userId)
+			if h == nil {
+				return event.UpdateMessage(discord.MessageUpdate{
+					Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
+					Embeds:      &[]discord.Embed{},
+					Components:  &[]discord.ContainerComponent{},
+					Attachments: &[]discord.AttachmentUpdate{},
 				})
-				if err != nil {
-					cause := ""
-					if strings.Contains(err.Error(), "403") {
-						cause = "I didn't have permission to edit that message!"
-					} else {
-						cause = "Something went wrong!"
-					}
-					_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-						Content: json.Ptr("Failed to re-render hive: " + cause),
-					})
-					return err
+			}
+			err := event.DeferCreateMessage(false)
+			if err != nil {
+				return err
+			}
+			message := event.Message
+			r := RenderHiveImage(h, true, false)
+			_, err = b.Client.Rest().UpdateMessage(message.ChannelID, message.ID, discord.MessageUpdate{
+				Files: []*discord.File{
+					{
+						Name:   "hive.png",
+						Reader: r,
+					},
+				},
+			})
+			if err != nil {
+				cause := ""
+				if strings.Contains(err.Error(), "403") {
+					cause = "I didn't have permission to edit that message!"
+				} else {
+					cause = "Something went wrong!"
 				}
 				_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-					Content: json.Ptr("Rerendered hive"),
+					Content: json.Ptr("Failed to re-render hive: " + cause),
 				})
 				return err
-			},
+			}
+			_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+				Content: json.Ptr("Rerendered hive"),
+			})
+			return err
 		},
 	}
 }
 
 func Initialize(h *handler.Handler, b *common.Bot) {
 	hiveService := NewHiveService()
-	h.AddCommands(HiveCommand(b, hiveService), HiveRerenderCommand(b, hiveService))
-	h.AddComponents(AddBeeButton(b), GiftAllButton(b, hiveService), SetLevelButton(), HiveInfoButton(hiveService), SaveIdButton())
+	h.AddCommands(HiveCommand(b, hiveService))
+	h.AddComponents(AddBeeButton(b), GiftAllButton(b, hiveService), SetLevelButton(),
+		HiveInfoButton(hiveService), SaveIdButton(), HiveRerenderButton(b, hiveService))
 	h.AddModals(AddBeeModal(hiveService), SetLevelModal(hiveService))
 }

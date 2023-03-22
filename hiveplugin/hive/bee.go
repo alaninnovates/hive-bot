@@ -91,13 +91,14 @@ func DrawBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
 	funcs["level"] = func() {
 		if b.level != 0 {
 			dc.SetHexColor("#000000")
-			//todo: figure out what this is doing and if its the actual cause of cpu spikes
+			//todo: this border drawing function creates cpu spikes, find a better way to do this
 			n := 3
 			for dy := -n; dy <= n; dy++ {
 				for dx := -n; dx <= n; dx++ {
 					if dx*dx+dy*dy >= n*n {
 						continue
 					}
+					//println("drawing", dx, dy)
 					xx := float64(x - 60 + dx)
 					yy := float64(y - 10 + dy)
 					dc.DrawStringAnchored(strconv.Itoa(b.level), xx, yy, 0, 0.5)
