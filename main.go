@@ -1,6 +1,7 @@
 package main
 
 import (
+	"alaninnovates.com/hive-bot/adminplugin"
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
@@ -64,6 +65,9 @@ func main() {
 	hiveplugin.Initialize(h, hiveBot)
 	guideplugin.Initialize(h, hiveBot)
 	miscplugin.Initialize(h, hiveBot)
+	if devMode {
+		adminplugin.Initialize(h, hiveBot)
+	}
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),
