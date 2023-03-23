@@ -29,6 +29,10 @@ func (b *Bee) Beequip() string {
 	return b.beequip
 }
 
+func (b *Bee) Mutation() string {
+	return b.mutation
+}
+
 func (b *Bee) SetGifted(state bool) {
 	b.gifted = state
 }

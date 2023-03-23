@@ -421,6 +421,12 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							Color:       0x00FF00,
 						},
 					},
+					Components: []discord.ContainerComponent{
+						discord.ActionRowComponent{
+							discord.NewSuccessButton("Hive Info", "handler:info:"+event.User().ID.String()),
+							discord.NewSuccessButton("Mutation Info", "handler:mutationinfo:"+event.User().ID.String()),
+						},
+					},
 				})
 			},
 			"view": func(event *events.ApplicationCommandInteractionCreate) error {
@@ -665,7 +671,7 @@ func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCre
 	}
 }
 
-func AddBeeButton(b *common.Bot) handler.Component {
+func AddBeeButton() handler.Component {
 	return handler.Component{
 		Name:  "addbee",
 		Check: common.UserIDCheck(),
@@ -742,12 +748,13 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 			userId, _ := snowflake.Parse(uid)
 			h := hiveService.GetHive(userId)
 			if h == nil {
-				return event.UpdateMessage(discord.MessageUpdate{
+				_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
 					Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
 					Embeds:      &[]discord.Embed{},
 					Components:  &[]discord.ContainerComponent{},
 					Attachments: &[]discord.AttachmentUpdate{},
 				})
+				return err
 			}
 			for _, b := range h.GetBees() {
 				b.SetGifted(true)
@@ -889,6 +896,61 @@ func HiveInfoButton(hiveService *State) handler.Component {
 						Color:       0x00FF00,
 					},
 				},
+				Components: []discord.ContainerComponent{
+					discord.ActionRowComponent{
+						discord.NewSuccessButton("Hive Info", "handler:info:"+event.User().ID.String()),
+						discord.NewSuccessButton("Mutation Info", "handler:mutationinfo:"+event.User().ID.String()),
+					},
+				},
+			})
+		},
+	}
+}
+
+func MutationInfoButton(hiveService *State) handler.Component {
+	return handler.Component{
+		Name:  "mutationinfo",
+		Check: common.UserIDCheck(),
+		Handler: func(event *events.ComponentInteractionCreate) error {
+			data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
+			uid := data[2]
+			userId, _ := snowflake.Parse(uid)
+			h := hiveService.GetHive(userId)
+			if h == nil {
+				return event.UpdateMessage(discord.MessageUpdate{
+					Content:     json.Ptr("Your hive seems to have gone missing... Create a new one with `/hive create`"),
+					Embeds:      &[]discord.Embed{},
+					Components:  &[]discord.ContainerComponent{},
+					Attachments: &[]discord.AttachmentUpdate{},
+				})
+			}
+			mutationData := make(map[string]map[string]int)
+			for _, bee := range h.GetBees() {
+				if bee.Mutation() == "None" {
+					continue
+				}
+				if mutationData[bee.Mutation()] == nil {
+					mutationData[bee.Mutation()] = make(map[string]int)
+				}
+				mutationData[bee.Mutation()][bee.Name()]++
+			}
+			content := ""
+			for mutationName, info := range mutationData {
+				content += mutationName + ": "
+				var strs []string
+				for name, amt := range info {
+					strs = append(strs, fmt.Sprintf(" x%d %s", amt, name))
+				}
+				content += strings.Join(strs, ",") + "\n"
+			}
+			return event.UpdateMessage(discord.MessageUpdate{
+				Embeds: &[]discord.Embed{
+					{
+						Title:       "Mutation Info",
+						Description: content,
+						Color:       0x00FF00,
+					},
+				},
 			})
 		},
 	}
@@ -958,7 +1020,8 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 
 func Initialize(h *handler.Handler, b *common.Bot, hiveService *State) {
 	h.AddCommands(HiveCommand(b, hiveService))
-	h.AddComponents(AddBeeButton(b), GiftAllButton(b, hiveService), SetLevelButton(),
-		HiveInfoButton(hiveService), SaveIdButton(), HiveRerenderButton(b, hiveService))
+	h.AddComponents(AddBeeButton(), GiftAllButton(b, hiveService), SetLevelButton(),
+		HiveInfoButton(hiveService), MutationInfoButton(hiveService),
+		SaveIdButton(), HiveRerenderButton(b, hiveService))
 	h.AddModals(AddBeeModal(hiveService), SetLevelModal(hiveService))
 }
