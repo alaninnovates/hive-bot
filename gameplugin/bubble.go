@@ -3,7 +3,6 @@ package gameplugin
 import (
 	"alaninnovates.com/hive-bot/common"
 	"context"
-	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
@@ -84,7 +83,7 @@ func BubbleButton(gameService *State) handler.Component {
 			if bu.PopAmount() == 25 {
 				timeTaken := time.Now().UnixMilli() - bu.StartTime
 				gameService.EndGame(event.User().ID)
-				res, err := b.Db.Collection("leaderboards").UpdateOne(context.TODO(),
+				_, err := b.Db.Collection("leaderboards").UpdateOne(context.TODO(),
 					bson.M{"user_id": event.User().ID},
 					bson.A{
 						bson.M{"$set": bson.M{
@@ -123,12 +122,12 @@ func BubbleButton(gameService *State) handler.Component {
 				if err != nil {
 					return err
 				}
-				if res.MatchedCount != 0 {
-					fmt.Println("matched and replaced an existing document")
-				}
-				if res.UpsertedCount != 0 {
-					fmt.Printf("inserted a new document with ID %v\n", res.UpsertedID)
-				}
+				//if res.MatchedCount != 0 {
+				//	fmt.Println("matched and replaced an existing document")
+				//}
+				//if res.UpsertedCount != 0 {
+				//	fmt.Printf("inserted a new document with ID %v\n", res.UpsertedID)
+				//}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "You popped all the bubbles in " + strconv.FormatInt(timeTaken/1000, 10) + " seconds!",
 				})
