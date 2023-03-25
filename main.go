@@ -8,6 +8,7 @@ import (
 	"alaninnovates.com/hive-bot/guideplugin"
 	"alaninnovates.com/hive-bot/hiveplugin"
 	"alaninnovates.com/hive-bot/miscplugin"
+	"alaninnovates.com/hive-bot/statsplugin"
 	"context"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -61,6 +62,7 @@ func main() {
 	}()
 
 	h := handler.New(logger)
+	go statsplugin.Initialize(h, hiveBot, devMode)
 	gameplugin.Initialize(h, hiveBot)
 	hiveService := hiveplugin.NewHiveService()
 	hiveplugin.Initialize(h, hiveBot, hiveService)
