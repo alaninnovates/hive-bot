@@ -64,6 +64,7 @@ func PostStats(b *common.Bot, state *State) {
 	if err != nil {
 		b.Logger.Errorf("Failed to send stats: HTTP post errored")
 		b.Logger.Error(err)
+		return
 	}
 	if res.StatusCode != 200 {
 		b.Logger.Errorf("Failed to send stats: HTTP post errored with code %d", res.StatusCode)

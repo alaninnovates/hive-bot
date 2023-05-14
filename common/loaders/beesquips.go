@@ -28,6 +28,9 @@ func GetBeequips() []string {
 		panic(err)
 	}
 	for _, fi := range fileInfos {
+		if fi.Name() == ".DS_Store" {
+			continue
+		}
 		if fi.Type() == fs.FileMode(0) {
 			files = append(files, strings.Split(fi.Name(), ".")[0])
 		}

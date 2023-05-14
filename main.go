@@ -68,9 +68,6 @@ func main() {
 	hiveplugin.Initialize(h, hiveBot, hiveService)
 	guideplugin.Initialize(h, hiveBot)
 	miscplugin.Initialize(h, hiveBot)
-	if devMode {
-		adminplugin.Initialize(h, hiveBot, hiveService)
-	}
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithLogger(logger),
@@ -90,6 +87,12 @@ func main() {
 	} else {
 		h.SyncCommands(hiveBot.Client)
 	}
+	adminplugin.Initialize(h, hiveBot, hiveService)
+	read, err := godotenv.Read(".env.dev")
+	if err != nil {
+		logger.Fatal("Failed to read .env.dev: ", err)
+	}
+	h.SyncCommands(hiveBot.Client, snowflake.MustParse(read["GUILD_ID"]))
 
 	if err = hiveBot.Client.OpenGateway(context.TODO()); err != nil {
 		logger.Fatal("Failed to open gateway: ", err)

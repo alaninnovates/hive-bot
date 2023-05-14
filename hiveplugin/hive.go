@@ -260,8 +260,17 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				h := hiveService.CreateHive(event.User().ID)
 				slotNum := 1
 				for beeName, beeData := range parsedJson {
-					for i := 0; i < beeData.Amount; i++ {
-						h.AddBee(hive.NewBee(0, beeName, beeData.Gifted), slotNum)
+					var bd BeeData
+					switch beeData.(type) {
+					case map[string]interface{}:
+						bd.Gifted = beeData.(map[string]interface{})["gifted"].(bool)
+						bd.Amount = int(beeData.(map[string]interface{})["amount"].(float64))
+					case string:
+						//fmt.Println("type is string")
+						continue
+					}
+					for i := 0; i < bd.Amount; i++ {
+						h.AddBee(hive.NewBee(0, beeName, bd.Gifted), slotNum)
 						slotNum++
 					}
 				}

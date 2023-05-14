@@ -10,7 +10,10 @@ var schemaData = []byte(`{
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
   "patternProperties": {
-    "^[a-zA-Z]+$": {
+    "type": {
+       "type": "string"
+    },
+    "basic|bomber|brave|bumble|cool|hasty|looker|rad|rascal|stubborn|bubble|bucko|commander|demo|exhausted|fire|frosty|honey|rage|riley|shocked|baby|carpenter|demon|diamond|lion|music|ninja|shy|buoyant|fuzzy|precise|spicy|tadpole|vector|bear|cobalt|crimson|digital|festive|gummy|photon|puppy|tabby|vicious|windy": {
       "type": "object",
       "properties": {
         "amount": {
@@ -27,7 +30,7 @@ var schemaData = []byte(`{
       "additionalProperties": false
     }
   },
-  "maxProperties": 50,
+  "maxProperties": 51,
   "additionalProperties": false
 }`)
 
@@ -36,7 +39,7 @@ type BeeData struct {
 	Gifted bool `json:"gifted"`
 }
 
-type ImportedHive map[string]BeeData
+type ImportedHive map[string]any
 
 var cachedSchema *jsonschema.Schema
 
