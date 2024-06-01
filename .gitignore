@@ -5,3 +5,6 @@
 # executables
 hive-bot
 hive-bot-dev
+
+# temp files
+hives.json
