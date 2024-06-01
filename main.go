@@ -10,6 +10,7 @@ import (
 	"alaninnovates.com/hive-bot/miscplugin"
 	"alaninnovates.com/hive-bot/statsplugin"
 	"context"
+	"flag"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -23,22 +24,28 @@ import (
 	"syscall"
 )
 
+func loadEnvFile() bool {
+	devPtr := flag.Bool("dev", false, "a bool")
+	flag.Parse()
+	if *devPtr {
+		err := godotenv.Load(".env.dev")
+		if err != nil {
+			log.Fatal("Failed to load .env.dev: ", err)
+		}
+	} else {
+		err := godotenv.Load(".env")
+		if err != nil {
+			log.Fatal("Failed to load .env: ", err)
+		}
+	}
+	return *devPtr
+}
+
 func main() {
 	logger := log.New(log.LstdFlags | log.Lshortfile)
 	logger.SetLevel(log.LevelInfo)
 
-	err := godotenv.Load(".env")
-	if err != nil {
-		logger.Fatal("Failed to load .env: ", err)
-	}
-	devMode := false
-	if os.Getenv("DEV_MODE") == "true" {
-		devMode = true
-		err = godotenv.Overload(".env.dev")
-		if err != nil {
-			logger.Fatal("Failed to load .env.dev: ", err)
-		}
-	}
+	devMode := loadEnvFile()
 
 	var (
 		token = os.Getenv("TOKEN")
@@ -70,7 +77,6 @@ func main() {
 	miscplugin.Initialize(h, hiveBot)
 
 	if hiveBot.Client, err = disgo.New(token,
-		bot.WithLogger(logger),
 		bot.WithGatewayConfigOpts(
 			gateway.WithIntents(gateway.IntentGuilds),
 		),
@@ -83,7 +89,7 @@ func main() {
 	}
 
 	if devMode {
-		h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
+		//h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
 	} else {
 		h.SyncCommands(hiveBot.Client)
 	}
