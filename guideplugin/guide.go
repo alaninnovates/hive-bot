@@ -17,22 +17,37 @@ type Guide struct {
 var hiveGuides = map[string]Guide{
 	"Red Hive": {
 		Embed: discord.Embed{
-			Title: "Red Hive",
-			Color: 0xff0000,
+			Title:       "Red Hive Guides",
+			Color:       0xC51E3A,
+			Description: "Find all of our hive guides at [Meta Bee's website](https://meta-bee.my.to/category/hive-builds/). We have guides for all hive colors, and much more to come!",
+			Footer: &discord.EmbedFooter{
+				Text:    "Visit https://meta-bee.my.to/ for all of our posts!",
+				IconURL: "",
+			},
 		},
 		EmojiID: 1055878225663901827,
 	},
 	"Blue Hive": {
 		Embed: discord.Embed{
-			Title: "Blue Hive",
-			Color: 0x0000ff,
+			Title:       "Blue Hive Guides",
+			Color:       0x318CE7,
+			Description: "Find all of our hive guides at [Meta Bee's website](https://meta-bee.my.to/category/hive-builds/). We have guides for all hive colors, and much more to come!",
+			Footer: &discord.EmbedFooter{
+				Text:    "Visit https://meta-bee.my.to/ for all of our posts!",
+				IconURL: "",
+			},
 		},
 		EmojiID: 1055878223931654244,
 	},
 	"White Hive": {
 		Embed: discord.Embed{
-			Title: "White Hive",
-			Color: 0xffffff,
+			Title:       "White Hive Guides",
+			Color:       0xFFFDD0,
+			Description: "Find all of our hive guides at [Meta Bee's website](https://meta-bee.my.to/category/hive-builds/). We have guides for all hive colors, and much more to come!",
+			Footer: &discord.EmbedFooter{
+				Text:    "Visit https://meta-bee.my.to/ for all of our posts!",
+				IconURL: "",
+			},
 		},
 		EmojiID: 1055878226548883507,
 	},
@@ -69,14 +84,20 @@ func GuidesCommand(b *common.Bot) handler.Command {
 				return event.CreateMessage(discord.MessageCreate{
 					Embeds: []discord.Embed{
 						{
-							Title: "Hive Guides",
+							Title:       "Hive Guides",
+							Color:       0x318CE7,
+							Description: "Find all of our hive guides at [Meta Bee's website](https://meta-bee.my.to/category/hive-builds/). We have guides for all hive colors, and much more to come!",
+							Footer: &discord.EmbedFooter{
+								Text:    "Visit https://meta-bee.my.to/ for all of our posts!",
+								IconURL: "",
+							},
 						},
 					},
-					Components: []discord.ContainerComponent{
-						discord.ActionRowComponent{
-							discord.NewStringSelectMenu("handler:guides:hive", "Select a guide", GetComponents(hiveGuides)...),
-						},
-					},
+					//Components: []discord.ContainerComponent{
+					//	discord.ActionRowComponent{
+					//		discord.NewStringSelectMenu("handler:guides:hive", "Select a guide", GetComponents(hiveGuides)...),
+					//	},
+					//},
 				})
 			},
 		},
