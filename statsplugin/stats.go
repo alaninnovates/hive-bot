@@ -84,22 +84,22 @@ func Initialize(h *handler.Handler, b *common.Bot, devMode bool) {
 		b.Logger.Info("Not posting bot stats: Developer mode is enabled")
 		return
 	}
-	statsService := NewStatsService()
+	//statsService := NewStatsService()
 	b.Client.AddEventListeners(&events.ListenerAdapter{
 		OnReady: func(event *events.Ready) {
-			ticker := time.NewTicker(2 * time.Minute)
-			go func() {
-				for {
-					select {
-					case <-ticker.C:
-						PostStats(b, statsService)
-					}
-				}
-			}()
-			b.Logger.Info("Started auto poster.")
+			//ticker := time.NewTicker(2 * time.Minute)
+			//go func() {
+			//	for {
+			//		select {
+			//		case <-ticker.C:
+			//			PostStats(b, statsService)
+			//		}
+			//	}
+			//}()
+			//b.Logger.Info("Started auto poster.")
 		},
 		OnGuildsReady: func(event *events.GuildsReady) {
-			PostStats(b, statsService)
+			//PostStats(b, statsService)
 		},
 		OnApplicationCommandInteraction: func(event *events.ApplicationCommandInteractionCreate) {
 			if event.Data.Type() != discord.ApplicationCommandTypeSlash {
@@ -114,7 +114,7 @@ func Initialize(h *handler.Handler, b *common.Bot, devMode bool) {
 				guild = "Dms"
 			}
 			b.Logger.Infof("%s used %s in %s", event.User().Tag(), data.CommandPath(), guild)
-			statsService.CommandRun(event.User().ID, data.CommandPath())
+			//statsService.CommandRun(event.User().ID, data.CommandPath())
 		},
 	})
 }
