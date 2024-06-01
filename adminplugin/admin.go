@@ -4,15 +4,60 @@ import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/hiveplugin"
+	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
+	"github.com/disgoorg/snowflake/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
+	"time"
 )
 
-func AdminCommand(b *common.Bot, hiveService *hiveplugin.State) handler.Command {
+func LoadHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
+	hives, err := jsonCacheService.LoadHives("hives.json")
+	if err != nil {
+		b.Logger.Error(err)
+		return
+	}
+	b.Logger.Infof("Loading %d hives", len(hives))
+	for _, cachedUser := range hives {
+		h := hiveService.CreateHive(snowflake.MustParse(cachedUser.Id))
+		for idx, cachedBee := range cachedUser.Hive {
+			h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
+			h.GetBee(idx).SetBeequip(cachedBee.Beequip)
+			h.GetBee(idx).SetMutation(cachedBee.Mutation)
+		}
+	}
+}
+
+func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
+	cachedUsers := make([]database.CachedUser, 0)
+	for id, h := range hiveService.Hives() {
+		cachedHive := make(database.CachedHive)
+		for idx, bee := range h.GetBees() {
+			cachedHive[idx] = database.CachedBee{
+				Id:       bee.Id(),
+				Level:    bee.Level(),
+				Gifted:   bee.Gifted(),
+				Beequip:  bee.Beequip(),
+				Mutation: bee.Mutation(),
+			}
+		}
+		cachedUsers = append(cachedUsers, database.CachedUser{
+			Id:   id.String(),
+			Hive: cachedHive,
+		})
+	}
+	err := jsonCacheService.SaveHives("hives.json", cachedUsers)
+	if err != nil {
+		b.Logger.Error(err)
+	}
+	b.Logger.Infof("Backed up %d hives", len(cachedUsers))
+}
+
+func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) handler.Command {
 	return handler.Command{
 		Create: discord.SlashCommandCreate{
 			Name:        "admin",
@@ -74,6 +119,14 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State) handler.Command 
 					Name:        "active-hives",
 					Description: "List the number of active, cached hives",
 				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "json-save-hives",
+					Description: "Save the current hives to a json file",
+				},
+				discord.ApplicationCommandOptionSubCommand{
+					Name:        "json-load-hives",
+					Description: "Load hives from a json file",
+				},
 			},
 		},
 		CommandHandlers: map[string]handler.CommandHandler{
@@ -114,10 +167,66 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State) handler.Command 
 			"active-hives": func(event *events.ApplicationCommandInteractionCreate) error {
 				return event.CreateMessage(discord.MessageCreate{Content: strconv.Itoa(hiveService.HiveCount())})
 			},
+			"json-save-hives": func(event *events.ApplicationCommandInteractionCreate) error {
+				cachedUsers := make([]database.CachedUser, 0)
+				for id, h := range hiveService.Hives() {
+					cachedHive := make(database.CachedHive)
+					for idx, bee := range h.GetBees() {
+						cachedHive[idx] = database.CachedBee{
+							Id:       bee.Id(),
+							Level:    bee.Level(),
+							Gifted:   bee.Gifted(),
+							Beequip:  bee.Beequip(),
+							Mutation: bee.Mutation(),
+						}
+					}
+					cachedUsers = append(cachedUsers, database.CachedUser{
+						Id:   id.String(),
+						Hive: cachedHive,
+					})
+				}
+				err := jsonCacheService.SaveHives("hives.json", cachedUsers)
+				if err != nil {
+					return event.CreateMessage(discord.MessageCreate{Content: err.Error()})
+				}
+				return event.CreateMessage(discord.MessageCreate{Content: "ok"})
+			},
+			"json-load-hives": func(event *events.ApplicationCommandInteractionCreate) error {
+				hives, err := jsonCacheService.LoadHives("hives.json")
+				if err != nil {
+					return event.CreateMessage(discord.MessageCreate{Content: err.Error()})
+				}
+				for _, cachedUser := range hives {
+					h := hiveService.CreateHive(snowflake.MustParse(cachedUser.Id))
+					for idx, cachedBee := range cachedUser.Hive {
+						h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
+						h.GetBee(idx).SetBeequip(cachedBee.Beequip)
+						h.GetBee(idx).SetMutation(cachedBee.Mutation)
+					}
+				}
+				return event.CreateMessage(discord.MessageCreate{Content: "ok"})
+			},
 		},
 	}
 }
 
 func Initialize(h *handler.Handler, b *common.Bot, hiveService *hiveplugin.State) {
-	h.AddCommands(AdminCommand(b, hiveService))
+	jsonCacheService := database.NewJsonCache()
+	h.AddCommands(AdminCommand(b, hiveService, jsonCacheService))
+	b.Client.AddEventListeners(&events.ListenerAdapter{
+		OnReady: func(event *events.Ready) {
+			LoadHives(b, hiveService, jsonCacheService)
+			b.Logger.Info("Loaded hives from json.")
+			ticker := time.NewTicker(10 * time.Minute)
+			go func() {
+				for {
+					select {
+					case <-ticker.C:
+						BackupHives(b, hiveService, jsonCacheService)
+					}
+				}
+			}()
+			b.Logger.Info("Started automated hive backups.")
+		},
+	})
 }

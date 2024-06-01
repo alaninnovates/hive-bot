@@ -26,3 +26,7 @@ func (s *State) GetHive(userID snowflake.ID) *hive.Hive {
 func (s *State) HiveCount() int {
 	return len(s.users)
 }
+
+func (s *State) Hives() map[snowflake.ID]*hive.Hive {
+	return s.users
+}
