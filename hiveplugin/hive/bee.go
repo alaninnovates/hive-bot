@@ -21,6 +21,18 @@ func NewBee(level int, id string, gifted bool) *Bee {
 	return &Bee{level, id, meta.Name, gifted, "None", "None"}
 }
 
+func (b *Bee) Level() int {
+	return b.level
+}
+
+func (b *Bee) Gifted() bool {
+	return b.gifted
+}
+
+func (b *Bee) Id() string {
+	return b.id
+}
+
 func (b *Bee) Name() string {
 	return b.name
 }

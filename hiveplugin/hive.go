@@ -193,6 +193,11 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							Description: "Whether or not to show slot numbers on top of bees",
 							Required:    false,
 						},
+						discord.ApplicationCommandOptionString{
+							Name:        "ability",
+							Description: "Show only bees that have a certain ability",
+							Required:    false,
+						},
 					},
 				},
 				discord.ApplicationCommandOptionSubCommand{
@@ -458,6 +463,22 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				if !provided {
 					slotsOnTop = false
 				}
+				renderAbility, provided := data.OptString("ability")
+				if !provided {
+					renderAbility = ""
+				}
+				if renderAbility != "" {
+					_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+						Embeds: &[]discord.Embed{
+							{
+								Title:       "Premium Only Feature",
+								Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
+								Color:       0x800080,
+							},
+						},
+					})
+					return err
+				}
 				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop)
 				hn := ""
 				if showHiveNumbers {
@@ -676,7 +697,7 @@ func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCre
 				i++
 			}
 		}
-		return event.Result(matches)
+		return event.AutocompleteResult(matches)
 	}
 }
 
@@ -685,7 +706,7 @@ func AddBeeButton() handler.Component {
 		Name:  "addbee",
 		Check: common.UserIDCheck(),
 		Handler: func(event *events.ComponentInteractionCreate) error {
-			return event.CreateModal(discord.NewModalCreateBuilder().
+			return event.Modal(discord.NewModalCreateBuilder().
 				SetCustomID("handler:addbeemodal").
 				AddActionRow(discord.NewShortTextInput("name", "Bee name")).
 				AddActionRow(discord.NewShortTextInput("slots", "Slots")).
@@ -713,6 +734,7 @@ func AddBeeModal(hiveService *State) handler.Modal {
 			if h == nil {
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Your hive seems to have gone missing... Create a new one with `/hive create`",
+					Flags:   discord.MessageFlagEphemeral,
 				})
 			}
 			name, _ := event.Data.OptText("name")
@@ -738,6 +760,7 @@ func AddBeeModal(hiveService *State) handler.Modal {
 			}
 			return event.CreateMessage(discord.MessageCreate{
 				Content: "Added bee.",
+				Flags:   discord.MessageFlagEphemeral,
 			})
 		},
 	}
@@ -768,10 +791,6 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 			for _, b := range h.GetBees() {
 				b.SetGifted(true)
 			}
-			// ignore errors
-			_, _ = b.Client.Rest().CreateMessage(event.ChannelID(), discord.MessageCreate{
-				Content: "Gifted all bees in your hive!",
-			})
 			showHiveNumbers := false
 			if shn == "1" {
 				showHiveNumbers = true
@@ -787,6 +806,10 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 					},
 				},
 			})
+			_, _ = b.Client.Rest().CreateFollowupMessage(b.Client.ApplicationID(), event.Token(), discord.MessageCreate{
+				Content: "Gifted all bees in your hive!",
+				Flags:   discord.MessageFlagEphemeral,
+			})
 			return err
 		},
 	}
@@ -797,7 +820,7 @@ func SetLevelButton() handler.Component {
 		Name:  "setlevelbutton",
 		Check: common.UserIDCheck(),
 		Handler: func(event *events.ComponentInteractionCreate) error {
-			return event.CreateModal(discord.ModalCreate{
+			return event.Modal(discord.ModalCreate{
 				Title:    "Set level of all bees",
 				CustomID: "handler:setlevelmodal",
 				Components: []discord.ContainerComponent{
@@ -826,12 +849,14 @@ func SetLevelModal(hiveService *State) handler.Modal {
 			if err != nil || levelInt < 1 || levelInt > 25 {
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Level must be an integer between 1 and 25",
+					Flags:   discord.MessageFlagEphemeral,
 				})
 			}
 			h := hiveService.GetHive(event.User().ID)
 			if h == nil {
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Your hive seems to have gone missing... Create a new one with `/hive create`",
+					Flags:   discord.MessageFlagEphemeral,
 				})
 			}
 			for _, b := range h.GetBees() {
@@ -839,6 +864,7 @@ func SetLevelModal(hiveService *State) handler.Modal {
 			}
 			return event.CreateMessage(discord.MessageCreate{
 				Content: "Set level of all bees to " + levelStr,
+				Flags:   discord.MessageFlagEphemeral,
 			})
 		},
 	}
@@ -993,7 +1019,7 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 					Attachments: &[]discord.AttachmentUpdate{},
 				})
 			}
-			err := event.DeferCreateMessage(false)
+			err := event.DeferCreateMessage(true)
 			if err != nil {
 				return err
 			}
