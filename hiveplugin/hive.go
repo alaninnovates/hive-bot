@@ -51,9 +51,9 @@ func ValidateRange(rangeStr string, min int, max int) bool {
 	return true
 }
 
-func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool) *io.PipeReader {
+func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHiveNumbers []int) *io.PipeReader {
 	dc := gg.NewContext(410, 950)
-	hive.DrawHive(h, dc, showHiveNumbers, slotsOnTop)
+	hive.DrawHive(h, dc, showHiveNumbers, slotsOnTop, skipHiveNumbers)
 	img := dc.Image()
 	bg, _ := gg.LoadImage("assets/bg.png")
 	hiveImage := gg.NewContextForImage(bg)
@@ -194,8 +194,14 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							Required:    false,
 						},
 						discord.ApplicationCommandOptionString{
-							Name:        "ability",
-							Description: "Show only bees that have a certain ability",
+							Name:         "ability",
+							Description:  "Show only bees that have a certain ability",
+							Required:     false,
+							Autocomplete: true,
+						},
+						discord.ApplicationCommandOptionString{
+							Name:        "slots",
+							Description: "Show only bees that are in the selected slots",
 							Required:    false,
 						},
 					},
@@ -467,19 +473,61 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				if !provided {
 					renderAbility = ""
 				}
+				var skipHiveNumbers []int
 				if renderAbility != "" {
-					_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-						Embeds: &[]discord.Embed{
-							{
-								Title:       "Premium Only Feature",
-								Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
-								Color:       0x800080,
+					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
+					if err != nil {
+						return err
+					}
+					if premiumLevel < common.PremiumLevelBuilder {
+						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+							Embeds: &[]discord.Embed{
+								{
+									Title:       "Premium Only Feature",
+									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
+									Color:       0x800080,
+								},
 							},
-						},
-					})
-					return err
+						})
+						return err
+					}
+					for i, bee := range h.GetBees() {
+						if !common.ArrayIncludes(loaders.GetBeeAbilities(bee.Name()), renderAbility) {
+							skipHiveNumbers = append(skipHiveNumbers, i)
+						}
+					}
+					showHiveNumbers = false
 				}
-				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop)
+				slots, provided := data.OptString("slots")
+				if provided {
+					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
+					if err != nil {
+						return err
+					}
+					if premiumLevel < common.PremiumLevelBuilder {
+						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+							Embeds: &[]discord.Embed{
+								{
+									Title:       "Premium Only Feature",
+									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
+									Color:       0x800080,
+								},
+							},
+						})
+						return err
+					}
+					if !ValidateRange(slots, 1, 50) {
+						return event.CreateMessage(InvalidSlotsMessage)
+					}
+					slotRange := GetRangeNumbers(slots)
+					for i := 1; i <= 50; i++ {
+						if !common.ArrayIncludes(slotRange, i) {
+							skipHiveNumbers = append(skipHiveNumbers, i)
+						}
+					}
+					showHiveNumbers = false
+				}
+				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop, skipHiveNumbers)
 				hn := ""
 				if showHiveNumbers {
 					hn = "1"
@@ -674,6 +722,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 			"add":         makeAutocompleteHandler(loaders.GetBeeNames()),
 			"setbeequip":  makeAutocompleteHandler(append(loaders.GetBeequips(), "None")),
 			"setmutation": makeAutocompleteHandler(loaders.GetMutations()),
+			"view":        makeAutocompleteHandler(loaders.GetBeeAbilityList()),
 		},
 	}
 }
@@ -797,7 +846,7 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 			} else if shn == "0" {
 				showHiveNumbers = false
 			}
-			r := RenderHiveImage(h, showHiveNumbers, false)
+			r := RenderHiveImage(h, showHiveNumbers, false, make([]int, 0))
 			_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Files: []*discord.File{
 					{
@@ -1024,7 +1073,7 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 				return err
 			}
 			message := event.Message
-			r := RenderHiveImage(h, true, false)
+			r := RenderHiveImage(h, true, false, make([]int, 0))
 			_, err = b.Client.Rest().UpdateMessage(message.ChannelID, message.ID, discord.MessageUpdate{
 				Files: []*discord.File{
 					{

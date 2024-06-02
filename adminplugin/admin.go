@@ -210,11 +210,14 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService
 	}
 }
 
-func Initialize(h *handler.Handler, b *common.Bot, hiveService *hiveplugin.State) {
+func Initialize(h *handler.Handler, b *common.Bot, hiveService *hiveplugin.State, devMode bool) {
 	jsonCacheService := database.NewJsonCache()
 	h.AddCommands(AdminCommand(b, hiveService, jsonCacheService))
 	b.Client.AddEventListeners(&events.ListenerAdapter{
 		OnReady: func(event *events.Ready) {
+			if devMode {
+				return
+			}
 			LoadHives(b, hiveService, jsonCacheService)
 			b.Logger.Info("Loaded hives from json.")
 			ticker := time.NewTicker(10 * time.Minute)

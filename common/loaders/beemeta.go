@@ -12,68 +12,74 @@ const (
 )
 
 type BeeMeta struct {
-	Name string
-	Path string
-	Kind int64
+	Name      string
+	Path      string
+	Kind      int64
+	Abilities []string
 }
 
 func p(s string) string {
 	return "assets/faces/" + s + ".png"
 }
 
-func b(name string, kind int64) BeeMeta {
+func b(name string, kind int64, abilities []string) BeeMeta {
 	return BeeMeta{
-		Name: strings.ToUpper(name[:1]) + name[1:] + " Bee",
-		Path: p(name),
-		Kind: kind,
+		Name:      strings.ToUpper(name[:1]) + name[1:] + " Bee",
+		Path:      p(name),
+		Kind:      kind,
+		Abilities: abilities,
 	}
 }
 
+func a(abilities ...string) []string {
+	return abilities
+}
+
 var bees = map[string]BeeMeta{
-	"basic":     b("basic", Common),
-	"bomber":    b("bomber", Rare),
-	"brave":     b("brave", Rare),
-	"bumble":    b("bumble", Rare),
-	"cool":      b("cool", Rare),
-	"hasty":     b("hasty", Rare),
-	"looker":    b("looker", Rare),
-	"rad":       b("rad", Rare),
-	"rascal":    b("rascal", Rare),
-	"stubborn":  b("stubborn", Rare),
-	"bubble":    b("bubble", Epic),
-	"bucko":     b("bucko", Epic),
-	"commander": b("commander", Epic),
-	"demo":      b("demo", Epic),
-	"exhausted": b("exhausted", Epic),
-	"fire":      b("fire", Epic),
-	"frosty":    b("frosty", Epic),
-	"honey":     b("honey", Epic),
-	"rage":      b("rage", Epic),
-	"riley":     b("riley", Epic),
-	"shocked":   b("shocked", Epic),
-	"baby":      b("baby", Legendary),
-	"carpenter": b("carpenter", Legendary),
-	"demon":     b("demon", Legendary),
-	"diamond":   b("diamond", Legendary),
-	"lion":      b("lion", Legendary),
-	"music":     b("music", Legendary),
-	"ninja":     b("ninja", Legendary),
-	"shy":       b("shy", Legendary),
-	"buoyant":   b("buoyant", Mythic),
-	"fuzzy":     b("fuzzy", Mythic),
-	"precise":   b("precise", Mythic),
-	"spicy":     b("spicy", Mythic),
-	"tadpole":   b("tadpole", Mythic),
-	"vector":    b("vector", Mythic),
-	"bear":      b("bear", Event),
-	"cobalt":    b("cobalt", Event),
-	"crimson":   b("crimson", Event),
-	"digital":   b("digital", Event),
-	"festive":   b("festive", Event),
-	"gummy":     b("gummy", Event),
-	"photon":    b("photon", Event),
-	"puppy":     b("puppy", Event),
-	"tabby":     b("tabby", Event),
-	"vicious":   b("vicious", Event),
-	"windy":     b("windy", Event),
+	"basic":     b("basic", Common, a()),
+	"bomber":    b("bomber", Rare, a("Buzz Bomb")),
+	"brave":     b("brave", Rare, a()),
+	"bumble":    b("bumble", Rare, a("Blue Bomb")),
+	"cool":      b("cool", Rare, a("Blue Boost")),
+	"hasty":     b("hasty", Rare, a("Haste")),
+	"looker":    b("looker", Rare, a("Focus")),
+	"rad":       b("rad", Rare, a("Red Boost")),
+	"rascal":    b("rascal", Rare, a("Red Bomb")),
+	"stubborn":  b("stubborn", Rare, a("Pollen Mark")),
+	"bubble":    b("bubble", Epic, a("Blue Bomb", "Passive: Gathering Bubbles")),
+	"bucko":     b("bucko", Epic, a("Blue Boost")),
+	"commander": b("commander", Epic, a("Focus", "Buzz Bomb")),
+	"demo":      b("demo", Epic, a("Buzz Bomb+")),
+	"exhausted": b("exhausted", Epic, a("Buzz Bomb", "Token Link")),
+	"fire":      b("fire", Epic, a("Red Bomb+", "Passive: Gathering Flames")),
+	"frosty":    b("frosty", Epic, a("Blue Boost", "Blue Bomb+")),
+	"honey":     b("honey", Epic, a("Honey Gift", "Honey Mark")),
+	"rage":      b("rage", Epic, a("Rage", "Token Link")),
+	"riley":     b("riley", Epic, a("Red Boost")),
+	"shocked":   b("shocked", Epic, a("Haste", "Token Link")),
+	"baby":      b("baby", Legendary, a("Baby Love")),
+	"carpenter": b("carpenter", Legendary, a("Honey Mark+", "Pollen Mark")),
+	"demon":     b("demon", Legendary, a("Red Bomb", "Red Bomb+", "Passive: Gathering Flames+")),
+	"diamond":   b("diamond", Legendary, a("Blue Boost", "Honey Gift+", "Passive: Shimmering Honey")),
+	"lion":      b("lion", Legendary, a("Buzz Bomb+")),
+	"music":     b("music", Legendary, a("Melody", "Focus", "Token Link")),
+	"ninja":     b("ninja", Legendary, a("Haste", "Blue Bomb+")),
+	"shy":       b("shy", Legendary, a("Red Boost", "Red Bomb", "Passive: Nectar Lover")),
+	"buoyant":   b("buoyant", Mythic, a("Blue Bomb", "Inflate Balloons", "Gifted: Surprise Party", "Passive: Balloon Enthusiast")),
+	"fuzzy":     b("fuzzy", Mythic, a("Fuzz Bombs", "Buzz Bomb+", "Gifted: Pollen Haze", "Passive: Fuzzy Coat")),
+	"precise":   b("precise", Mythic, a("Target Practice", "Passive: Sniper")),
+	"spicy":     b("spicy", Mythic, a("Inferno", "Rage", "Gifted: Flame Fuel", "Passive: Steam Engine")),
+	"tadpole":   b("tadpole", Mythic, a("Blue Boost", "Summon Frog", "Gifted: Baby Love", "Passive: Gathering Bubbles+")),
+	"vector":    b("vector", Mythic, a("Pollen Mark+", "Triangulate", "Gifted: Mark Surge")),
+	"bear":      b("bear", Event, a("Bear Morph")),
+	"cobalt":    b("cobalt", Event, a("Blue Pulse", "Blue Bomb Sync")),
+	"crimson":   b("crimson", Event, a("Red Pulse", "Red Bomb Sync")),
+	"digital":   b("digital", Event, a("Glitch", "Mind Hack", "Gifted: Map Corruption", "Passive: Drive Expansion")),
+	"festive":   b("festive", Event, a("Festive Gift", "Honey Mark", "Red Bomb+", "Festive Mark")),
+	"gummy":     b("gummy", Event, a("Gumdrop Barrage", "Glob")),
+	"photon":    b("photon", Event, a("Beamstorm", "Haste")),
+	"puppy":     b("puppy", Event, a("Fetch", "Puppy Love", "Focus")),
+	"tabby":     b("tabby", Event, a("Scratch", "Tabby Love")),
+	"vicious":   b("vicious", Event, a("Impale", "Blue Bomb+")),
+	"windy":     b("windy", Event, a("White Boost", "Rain Cloud", "Tornado")),
 }

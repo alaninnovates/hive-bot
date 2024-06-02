@@ -1,7 +1,6 @@
 package database
 
 import (
-	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"time"
@@ -12,13 +11,6 @@ import (
 
 type Database struct {
 	client *mongo.Client
-}
-
-type UserHive struct {
-	ID     primitive.ObjectID `bson:"_id"`
-	UserId int64              `bson:"user_id"`
-	Name   string
-	Bees   map[int]*hive.Bee
 }
 
 type TriviaQuestion struct {
@@ -35,6 +27,12 @@ type LeaderboardUser struct {
 	Discriminator string
 	TriviaPoints  int   `bson:"trivia_points"`
 	BubbleTime    int64 `bson:"bubble_time"`
+}
+
+type PremiumUser struct {
+	UserId       string             `bson:"user_id"`
+	PremiumLevel int64              `bson:"premium_level"`
+	MemberSince  primitive.DateTime `bson:"member_since"`
 }
 
 func NewDatabase() *Database {

@@ -27,3 +27,12 @@ func ShuffleArray[T any](array []T) []T {
 	}
 	return dest
 }
+
+func ArrayIncludes[T comparable](array []T, value T) bool {
+	for _, v := range array {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}

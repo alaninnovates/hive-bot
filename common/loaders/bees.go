@@ -47,3 +47,25 @@ func GetBeeNames() []string {
 	sort.Strings(beeNames)
 	return beeNames
 }
+
+func GetBeeAbilities(beeName string) []string {
+	return bees[GetBeeId(beeName)].Abilities
+}
+
+func GetBeeAbilityList() []string {
+	abilities := make([]string, 0)
+	for _, v := range bees {
+		for _, a := range v.Abilities {
+			abilities = append(abilities, a)
+		}
+	}
+	sort.Strings(abilities)
+	// remove duplicates
+	for i := 0; i < len(abilities)-1; i++ {
+		if abilities[i] == abilities[i+1] {
+			abilities = append(abilities[:i], abilities[i+1:]...)
+			i--
+		}
+	}
+	return abilities
+}

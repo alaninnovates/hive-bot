@@ -1,6 +1,7 @@
 package hive
 
 import (
+	"alaninnovates.com/hive-bot/common"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
 	"image/color"
@@ -49,7 +50,7 @@ var (
 	offsetY   = 15
 )
 
-func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool) {
+func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, skipHiveNumbers []int) {
 	//dc.SetHexColor(bgColor)
 	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()
@@ -80,7 +81,7 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool) {
 					}
 					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
 				}
-				if bee != nil {
+				if bee != nil && !common.ArrayIncludes(skipHiveNumbers, hiveNumber) {
 					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
@@ -112,7 +113,7 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool) {
 					}
 					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
 				}
-				if bee != nil {
+				if bee != nil && !common.ArrayIncludes(skipHiveNumbers, hiveNumber) {
 					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
