@@ -24,8 +24,12 @@ import (
 	"syscall"
 )
 
-func loadEnvFile() bool {
+func main() {
+	logger := log.New(log.LstdFlags | log.Lshortfile)
+	logger.SetLevel(log.LevelInfo)
+
 	devPtr := flag.Bool("dev", false, "a bool")
+	syncCommandsPtr := flag.Bool("sync", false, "a bool")
 	flag.Parse()
 	if *devPtr {
 		err := godotenv.Load(".env.dev")
@@ -38,14 +42,8 @@ func loadEnvFile() bool {
 			log.Fatal("Failed to load .env: ", err)
 		}
 	}
-	return *devPtr
-}
-
-func main() {
-	logger := log.New(log.LstdFlags | log.Lshortfile)
-	logger.SetLevel(log.LevelInfo)
-
-	devMode := loadEnvFile()
+	devMode := *devPtr
+	syncCommands := *syncCommandsPtr
 
 	var (
 		token = os.Getenv("TOKEN")
@@ -88,17 +86,14 @@ func main() {
 		logger.Fatal("Failed to create disgo client: ", err)
 	}
 
-	if devMode {
-		//h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
-	} else {
+	if !devMode && syncCommands {
 		h.SyncCommands(hiveBot.Client)
 	}
-	adminplugin.Initialize(h, hiveBot, hiveService)
-	read, err := godotenv.Read(".env.dev")
-	if err != nil {
-		logger.Fatal("Failed to read .env.dev: ", err)
+	adminplugin.Initialize(h, hiveBot, hiveService, devMode)
+	if devMode && syncCommands {
+		h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
+		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
 	}
-	h.SyncCommands(hiveBot.Client, snowflake.MustParse(read["GUILD_ID"]))
 
 	if err = hiveBot.Client.OpenGateway(context.TODO()); err != nil {
 		logger.Fatal("Failed to open gateway: ", err)
