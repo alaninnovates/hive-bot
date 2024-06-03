@@ -51,11 +51,11 @@ func ValidateRange(rangeStr string, min int, max int) bool {
 	return true
 }
 
-func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHiveNumbers []int) *io.PipeReader {
+func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHiveNumbers []int, background string) *io.PipeReader {
 	dc := gg.NewContext(410, 950)
 	hive.DrawHive(h, dc, showHiveNumbers, slotsOnTop, skipHiveNumbers)
 	img := dc.Image()
-	bg, _ := gg.LoadImage("assets/bg.png")
+	bg, _ := gg.LoadImage(loaders.GetHiveBackgroundImagePath(background))
 	hiveImage := gg.NewContextForImage(bg)
 	hiveImage.DrawImageAnchored(img, hiveImage.Width()/2, hiveImage.Height()/2, 0.5, 0.5)
 	tmImage, _ := gg.LoadPNG("assets/trademark.png")
@@ -203,6 +203,12 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							Name:        "slots",
 							Description: "Show only bees that are in the selected slots",
 							Required:    false,
+						},
+						discord.ApplicationCommandOptionString{
+							Name:        "background",
+							Description: "What you want the background of your hive to be",
+							Required:    false,
+							Choices:     loaders.GetHiveBackgroundsChoices(),
 						},
 					},
 				},
@@ -474,6 +480,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					renderAbility = ""
 				}
 				var skipHiveNumbers []int
+				var includedHiveNumbers []int
 				if renderAbility != "" {
 					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
 					if err != nil {
@@ -494,6 +501,8 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					for i, bee := range h.GetBees() {
 						if !common.ArrayIncludes(loaders.GetBeeAbilities(bee.Name()), renderAbility) {
 							skipHiveNumbers = append(skipHiveNumbers, i)
+						} else {
+							includedHiveNumbers = append(includedHiveNumbers, i)
 						}
 					}
 					showHiveNumbers = false
@@ -521,13 +530,35 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					}
 					slotRange := GetRangeNumbers(slots)
 					for i := 1; i <= 50; i++ {
-						if !common.ArrayIncludes(slotRange, i) {
+						if !common.ArrayIncludes(slotRange, i) && !common.ArrayIncludes(includedHiveNumbers, i) {
 							skipHiveNumbers = append(skipHiveNumbers, i)
 						}
 					}
 					showHiveNumbers = false
 				}
-				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop, skipHiveNumbers)
+				background, provided := data.OptString("background")
+				if !provided {
+					background = "default"
+				}
+				if provided {
+					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
+					if err != nil {
+						return err
+					}
+					if premiumLevel < common.PremiumLevelBuilder {
+						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+							Embeds: &[]discord.Embed{
+								{
+									Title:       "Premium Only Feature",
+									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
+									Color:       0x800080,
+								},
+							},
+						})
+						return err
+					}
+				}
+				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop, skipHiveNumbers, background)
 				hn := ""
 				if showHiveNumbers {
 					hn = "1"
@@ -575,8 +606,16 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						Content: "You need to provide a non-empty name for the hive.",
 					})
 				}
+				premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
+				if err != nil {
+					return err
+				}
 				userSaveCount, _ := b.Db.Collection("hives").CountDocuments(context.Background(), bson.M{"user_id": event.User().ID})
-				if int(userSaveCount) >= common.MaxFreeSaves {
+				maxSaves := common.MaxFreeSaves
+				if premiumLevel >= common.PremiumLevelBuilder {
+					maxSaves = common.MaxPremiumSaves
+				}
+				if int(userSaveCount) >= maxSaves {
 					return event.CreateMessage(discord.MessageCreate{
 						Content: "You have reached the maximum number of free saves.",
 					})
@@ -665,12 +704,17 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					})
 				}
 				var saves []string
+				var rows []discord.ContainerComponent
 				row := discord.ActionRowComponent{}
 				for i, result := range results {
 					id, _ := result.Map()["_id"].(primitive.ObjectID).MarshalText()
 					name := result.Map()["name"].(string)
 					saves = append(saves, fmt.Sprintf("%d. %s (`%s`)", i+1, name, id))
 					row = row.AddComponents(discord.NewPrimaryButton(name, fmt.Sprintf("handler:save-id:%s:%s", event.User().ID.String(), id)))
+					if i%5 == 0 && i != 0 {
+						rows = append(rows, row)
+						row = discord.ActionRowComponent{}
+					}
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Embeds: []discord.Embed{
@@ -682,9 +726,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							},
 						},
 					},
-					Components: []discord.ContainerComponent{
-						row,
-					},
+					Components: rows,
 				})
 			},
 			"saves/delete": func(event *events.ApplicationCommandInteractionCreate) error {
@@ -846,7 +888,7 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 			} else if shn == "0" {
 				showHiveNumbers = false
 			}
-			r := RenderHiveImage(h, showHiveNumbers, false, make([]int, 0))
+			r := RenderHiveImage(h, showHiveNumbers, false, make([]int, 0), "default")
 			_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
 				Files: []*discord.File{
 					{
@@ -1073,7 +1115,7 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 				return err
 			}
 			message := event.Message
-			r := RenderHiveImage(h, true, false, make([]int, 0))
+			r := RenderHiveImage(h, true, false, make([]int, 0), "default")
 			_, err = b.Client.Rest().UpdateMessage(message.ChannelID, message.ID, discord.MessageUpdate{
 				Files: []*discord.File{
 					{
