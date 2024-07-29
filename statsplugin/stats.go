@@ -4,6 +4,7 @@ import (
 	"alaninnovates.com/hive-bot/common"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
@@ -62,22 +63,21 @@ func PostStats(b *common.Bot, state *State) {
 	r := bytes.NewReader(data)
 	res, err := http.Post(baseUrl+"/stats", "application/json", r)
 	if err != nil {
-		b.Logger.Errorf("Failed to send stats: HTTP post errored")
-		b.Logger.Error(err)
+		b.Logger.Error("Failed to send stats: HTTP post errored: %v", err)
 		return
 	}
 	if res.StatusCode != 200 {
-		b.Logger.Errorf("Failed to send stats: HTTP post errored with code %d", res.StatusCode)
+		b.Logger.Error("Failed to send stats: HTTP post errored with code %d", res.StatusCode)
 		bts, _ := io.ReadAll(res.Body)
-		b.Logger.Errorf("%s", bts)
+		b.Logger.Error("%s", bts)
 		return
 	}
-	b.Logger.Infof("Posted stats. Servers: %d, Users: %d", b.Client.Caches().GuildsLen(), members)
+	b.Logger.Info(fmt.Sprintf("Posted stats. Servers: %d, Users: %d", b.Client.Caches().GuildsLen(), members))
 	state.ResetStats()
 }
 
 func Initialize(h *handler.Handler, b *common.Bot, devMode bool) {
-	for b.Client == nil || !b.Client.HasGateway() {
+	for b.Client == nil {
 		time.Sleep(1)
 	}
 	if devMode {
@@ -113,7 +113,7 @@ func Initialize(h *handler.Handler, b *common.Bot, devMode bool) {
 			} else {
 				guild = "Dms"
 			}
-			b.Logger.Infof("%s used %s in %s", event.User().Tag(), data.CommandPath(), guild)
+			b.Logger.Info(fmt.Sprintf("%s used %s in %s", event.User().Tag(), data.CommandPath(), guild))
 			//statsService.CommandRun(event.User().ID, data.CommandPath())
 		},
 	})

@@ -696,7 +696,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				cur, _ := b.Db.Collection("hives").Find(context.Background(), bson.M{"user_id": event.User().ID})
 				err := cur.All(context.Background(), &results)
 				if err != nil {
-					b.Logger.Error(err)
+					b.Logger.Error("Failed to list hive saves for user: %v", err)
 				}
 				if len(results) == 0 {
 					return event.CreateMessage(discord.MessageCreate{
@@ -748,7 +748,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					"user_id": event.User().ID,
 				})
 				if err != nil {
-					b.Logger.Error(err)
+					b.Logger.Error("Error deleting hive save: ", err)
 				}
 				if res.DeletedCount == 0 {
 					return event.CreateMessage(discord.MessageCreate{

@@ -6,6 +6,7 @@ import (
 	"alaninnovates.com/hive-bot/hiveplugin"
 	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"context"
+	"fmt"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
@@ -18,10 +19,10 @@ import (
 func LoadHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
 	hives, err := jsonCacheService.LoadHives("hives.json")
 	if err != nil {
-		b.Logger.Error(err)
+		b.Logger.Error("Failed to load hives: %v", err)
 		return
 	}
-	b.Logger.Infof("Loading %d hives", len(hives))
+	b.Logger.Info(fmt.Sprintf("Loading %d hives", len(hives)))
 	for _, cachedUser := range hives {
 		h := hiveService.CreateHive(snowflake.MustParse(cachedUser.Id))
 		for idx, cachedBee := range cachedUser.Hive {
@@ -52,9 +53,10 @@ func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService 
 	}
 	err := jsonCacheService.SaveHives("hives.json", cachedUsers)
 	if err != nil {
-		b.Logger.Error(err)
+		b.Logger.Error("Failed to back up hives: %v", err)
+		return
 	}
-	b.Logger.Infof("Backed up %d hives", len(cachedUsers))
+	b.Logger.Info(fmt.Sprintf("Backed up %d hives", len(cachedUsers)))
 }
 
 func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) handler.Command {

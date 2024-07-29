@@ -3,11 +3,11 @@ package common
 import (
 	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/bot"
-	"github.com/disgoorg/log"
+	"log/slog"
 )
 
 type Bot struct {
-	Logger log.Logger
+	Logger *slog.Logger
 	Client bot.Client
 	Db     database.Database
 }

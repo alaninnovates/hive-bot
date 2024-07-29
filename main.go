@@ -15,18 +15,21 @@ import (
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/sharding"
 	"github.com/disgoorg/handler"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	logger := log.New(log.LstdFlags | log.Lshortfile)
-	logger.SetLevel(log.LevelInfo)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
 
 	devPtr := flag.Bool("dev", false, "a bool")
 	syncCommandsPtr := flag.Bool("sync", false, "a bool")
@@ -34,12 +37,14 @@ func main() {
 	if *devPtr {
 		err := godotenv.Load(".env.dev")
 		if err != nil {
-			log.Fatal("Failed to load .env.dev: ", err)
+			logger.Error("Failed to load .env.dev")
+			panic(err)
 		}
 	} else {
 		err := godotenv.Load(".env")
 		if err != nil {
-			log.Fatal("Failed to load .env: ", err)
+			logger.Error("Failed to load .env")
+			panic(err)
 		}
 	}
 	devMode := *devPtr
@@ -57,7 +62,8 @@ func main() {
 
 	client, err := hiveBot.Db.Connect(dbUri)
 	if err != nil {
-		logger.Fatal("Failed to connect to database: ", err)
+		logger.Error("Failed to connect to database")
+		panic(err)
 	}
 
 	defer func() {
@@ -66,7 +72,7 @@ func main() {
 		}
 	}()
 
-	h := handler.New(logger)
+	h := handler.New(log.New(log.LstdFlags | log.Lshortfile))
 	go statsplugin.Initialize(h, hiveBot, devMode)
 	gameplugin.Initialize(h, hiveBot)
 	hiveService := hiveplugin.NewHiveService()
@@ -75,15 +81,22 @@ func main() {
 	miscplugin.Initialize(h, hiveBot)
 
 	if hiveBot.Client, err = disgo.New(token,
-		bot.WithGatewayConfigOpts(
-			gateway.WithIntents(gateway.IntentGuilds),
+		bot.WithShardManagerConfigOpts(
+			sharding.WithGatewayConfigOpts(
+				gateway.WithIntents(gateway.IntentGuilds),
+				gateway.WithLogger(logger),
+			),
+			sharding.WithLogger(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+				Level: slog.LevelDebug,
+			}))),
 		),
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagGuilds),
 		),
 		bot.WithEventListeners(h),
 	); err != nil {
-		logger.Fatal("Failed to create disgo client: ", err)
+		logger.Error("Failed to create disgo client")
+		panic(err)
 	}
 
 	if !devMode && syncCommands {
@@ -95,8 +108,9 @@ func main() {
 		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
 	}
 
-	if err = hiveBot.Client.OpenGateway(context.TODO()); err != nil {
-		logger.Fatal("Failed to open gateway: ", err)
+	if err = hiveBot.Client.OpenShardManager(context.Background()); err != nil {
+		logger.Error("Failed to open shard manager")
+		panic(err)
 	}
 
 	logger.Info("Hive Bot is running. Press CTRL-C to exit.")
