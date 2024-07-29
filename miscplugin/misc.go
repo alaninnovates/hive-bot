@@ -131,13 +131,13 @@ func StatsCommand(b *common.Bot) handler.Command {
 				b.Client.Caches().GuildsForEach(func(e discord.Guild) {
 					members += e.MemberCount
 				})
+				guildId, _ := strconv.Atoi(event.GuildID().String())
 				return event.CreateMessage(discord.MessageCreate{
 					Embeds: []discord.Embed{
 						{
-							Description: "Some statistics may be inaccurate due to caching.",
 							Fields: []discord.EmbedField{
 								{
-									Name:   "Guilds",
+									Name:   "Guilds on this shard (not total)",
 									Value:  strconv.Itoa(b.Client.Caches().GuildsLen()),
 									Inline: json.Ptr(true),
 								},
@@ -145,6 +145,10 @@ func StatsCommand(b *common.Bot) handler.Command {
 									Name:   "Members",
 									Value:  strconv.Itoa(members),
 									Inline: json.Ptr(true),
+								},
+								{
+									Name:  "Shard ID",
+									Value: strconv.Itoa(guildId >> 22 % len(b.Client.ShardManager().Shards())),
 								},
 							},
 							Footer: &discord.EmbedFooter{
