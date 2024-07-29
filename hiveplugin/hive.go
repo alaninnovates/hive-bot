@@ -200,6 +200,12 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 							Autocomplete: true,
 						},
 						discord.ApplicationCommandOptionString{
+							Name:         "beequip",
+							Description:  "Show only bees that have a certain beequip",
+							Required:     false,
+							Autocomplete: true,
+						},
+						discord.ApplicationCommandOptionString{
 							Name:        "slots",
 							Description: "Show only bees that are in the selected slots",
 							Required:    false,
@@ -475,13 +481,11 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				if !provided {
 					slotsOnTop = false
 				}
-				renderAbility, provided := data.OptString("ability")
-				if !provided {
-					renderAbility = ""
-				}
 				var skipHiveNumbers []int
 				var includedHiveNumbers []int
-				if renderAbility != "" {
+				// START: render by ability
+				renderAbility, provided := data.OptString("ability")
+				if provided {
 					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
 					if err != nil {
 						return err
@@ -506,7 +510,36 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						}
 					}
 					showHiveNumbers = false
-				}
+				} // END: render by ability
+				// START: render by beequip
+				renderBeequip, provided := data.OptString("beequip")
+				if provided {
+					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
+					if err != nil {
+						return err
+					}
+					if premiumLevel < common.PremiumLevelBuilder {
+						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
+							Embeds: &[]discord.Embed{
+								{
+									Title:       "Premium Only Feature",
+									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
+									Color:       0x800080,
+								},
+							},
+						})
+						return err
+					}
+					for i, bee := range h.GetBees() {
+						if renderBeequip != bee.Beequip() {
+							skipHiveNumbers = append(skipHiveNumbers, i)
+						} else {
+							includedHiveNumbers = append(includedHiveNumbers, i)
+						}
+					}
+					showHiveNumbers = false
+				} // END: render by beequip
+				// START: render by slots
 				slots, provided := data.OptString("slots")
 				if provided {
 					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
@@ -535,7 +568,8 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						}
 					}
 					showHiveNumbers = false
-				}
+				} // END: render by slots
+				// START: render background
 				background, provided := data.OptString("background")
 				if !provided {
 					background = "default"
@@ -557,7 +591,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						})
 						return err
 					}
-				}
+				} // END: render background
 				r := RenderHiveImage(h, showHiveNumbers, slotsOnTop, skipHiveNumbers, background)
 				hn := ""
 				if showHiveNumbers {
@@ -764,32 +798,54 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 			"add":         makeAutocompleteHandler(loaders.GetBeeNames()),
 			"setbeequip":  makeAutocompleteHandler(append(loaders.GetBeequips(), "None")),
 			"setmutation": makeAutocompleteHandler(loaders.GetMutations()),
-			"view":        makeAutocompleteHandler(loaders.GetBeeAbilityList()),
+			"view":        hiveViewAutocompleteHandler,
 		},
 	}
+}
+
+func hiveViewAutocompleteHandler(event *events.AutocompleteInteractionCreate) error {
+	focusedField := ""
+	for key, option := range event.Data.Options {
+		if option.Focused {
+			focusedField = key
+			break
+		}
+	}
+	if focusedField == "ability" {
+		ability := event.Data.String("ability")
+		return getMatches(event, loaders.GetBeeAbilityList(), ability)
+	} else if focusedField == "beequip" {
+		beequip := event.Data.String("beequip")
+		return getMatches(event, loaders.GetBeequips(), beequip)
+	}
+	return nil
 }
 
 func makeAutocompleteHandler(b []string) func(*events.AutocompleteInteractionCreate) error {
 	return func(event *events.AutocompleteInteractionCreate) error {
 		//fmt.Printf("evt: %d now: %d", event.ID().Time().UnixMilli(), time.Now().UnixMilli())
 		name := event.Data.String("name")
-		name = strings.ToLower(name)
-		matches := make([]discord.AutocompleteChoice, 0)
-		i := 0
-		for _, bee := range b {
-			if i >= 25 {
-				break
-			}
-			if strings.Contains(strings.ToLower(bee), name) {
-				matches = append(matches, discord.AutocompleteChoiceString{
-					Name:  bee,
-					Value: bee,
-				})
-				i++
-			}
-		}
-		return event.AutocompleteResult(matches)
+		return getMatches(event, b, name)
 	}
+}
+
+func getMatches(event *events.AutocompleteInteractionCreate, options []string, text string) error {
+	text = strings.ToLower(text)
+	matches := make([]discord.AutocompleteChoice, 0)
+	i := 0
+	for _, opt := range options {
+		if i >= 25 {
+			break
+		}
+		if strings.Contains(strings.ToLower(opt), text) {
+			matches = append(matches, discord.AutocompleteChoiceString{
+				Name:  opt,
+				Value: opt,
+			})
+			i++
+		}
+	}
+	return event.AutocompleteResult(matches)
 }
 
 func AddBeeButton() handler.Component {
