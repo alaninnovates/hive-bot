@@ -13,7 +13,7 @@ type CachedBee struct {
 	Mutation string
 }
 
-type CachedHive map[int]CachedBee
+type CachedHive map[int][]CachedBee
 
 type CachedUser struct {
 	Id   string

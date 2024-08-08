@@ -58,8 +58,8 @@ func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHi
 	bg, _ := gg.LoadImage(loaders.GetHiveBackgroundImagePath(background))
 	hiveImage := gg.NewContextForImage(bg)
 	hiveImage.DrawImageAnchored(img, hiveImage.Width()/2, hiveImage.Height()/2, 0.5, 0.5)
-	tmImage, _ := gg.LoadPNG("assets/trademark.png")
-	hiveImage.DrawImageAnchored(tmImage, hiveImage.Width()/2, 8, 0.5, 0)
+	//tmImage, _ := gg.LoadPNG("assets/trademark.png")
+	//hiveImage.DrawImageAnchored(tmImage, hiveImage.Width()/2, 8, 0.5, 0)
 	return common.ImageToPipe(hiveImage.Image())
 }
 
@@ -325,6 +325,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					return event.CreateMessage(InvalidSlotsMessage)
 				}
 				for _, slot := range GetRangeNumbers(slots) {
+					if len(h.GetBeesAt(slot)) > 1 {
+						// clear the first bee
+						h.RemoveBeeAt(slot, 0)
+					}
 					h.AddBee(hive.NewBee(level, loaders.GetBeeId(name), gifted), slot)
 				}
 				return event.CreateMessage(discord.MessageCreate{
@@ -357,8 +361,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
 					})
 				}
-				for _, bee := range h.GetBees() {
-					bee.SetGifted(true)
+				for _, bees := range h.GetBees() {
+					for _, bee := range bees {
+						bee.SetGifted(true)
+					}
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Gifted all bees in hive.",
@@ -373,8 +379,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				}
 				data := event.SlashCommandInteractionData()
 				level, _ := data.OptInt("level")
-				for _, bee := range h.GetBees() {
-					bee.SetLevel(level)
+				for _, bees := range h.GetBees() {
+					for _, bee := range bees {
+						bee.SetLevel(level)
+					}
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Set level of all bees in hive to " + strconv.Itoa(level) + ".",
@@ -399,7 +407,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					return event.CreateMessage(InvalidSlotsMessage)
 				}
 				for _, slot := range GetRangeNumbers(slots) {
-					h.GetBee(slot).SetBeequip(name)
+					bees := h.GetBeesAt(slot)
+					for _, bee := range bees {
+						bee.SetBeequip(name)
+					}
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Set beequip of bee(s).",
@@ -424,7 +435,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					return event.CreateMessage(InvalidSlotsMessage)
 				}
 				for _, slot := range GetRangeNumbers(slots) {
-					h.GetBee(slot).SetMutation(name)
+					bees := h.GetBeesAt(slot)
+					for _, bee := range bees {
+						bee.SetMutation(name)
+					}
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Set mutation of bee(s).",
@@ -438,8 +452,10 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						Content: "You don't have a hive. Create one with the `/hive create` command.",
 					})
 				}
-				for _, bee := range h.GetBees() {
-					bees[bee.Name()]++
+				for _, beeslist := range h.GetBees() {
+					for _, bee := range beeslist {
+						bees[bee.Name()]++
+					}
 				}
 				beesStr := ""
 				for name, count := range bees {
@@ -502,11 +518,19 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						})
 						return err
 					}
-					for i, bee := range h.GetBees() {
-						if !common.ArrayIncludes(loaders.GetBeeAbilities(bee.Name()), renderAbility) {
-							skipHiveNumbers = append(skipHiveNumbers, i)
-						} else {
+					for i, bees := range h.GetBees() {
+						oneBeeFlag := false
+						for _, bee := range bees {
+							if !common.ArrayIncludes(loaders.GetBeeAbilities(bee.Name()), renderAbility) {
+								oneBeeFlag = false
+							} else {
+								oneBeeFlag = true
+							}
+						}
+						if oneBeeFlag {
 							includedHiveNumbers = append(includedHiveNumbers, i)
+						} else {
+							skipHiveNumbers = append(skipHiveNumbers, i)
 						}
 					}
 					showHiveNumbers = false
@@ -530,11 +554,13 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 						})
 						return err
 					}
-					for i, bee := range h.GetBees() {
-						if renderBeequip != bee.Beequip() {
-							skipHiveNumbers = append(skipHiveNumbers, i)
-						} else {
-							includedHiveNumbers = append(includedHiveNumbers, i)
+					for i, bees := range h.GetBees() {
+						for _, bee := range bees {
+							if renderBeequip != bee.Beequip() {
+								skipHiveNumbers = append(skipHiveNumbers, i)
+							} else {
+								includedHiveNumbers = append(includedHiveNumbers, i)
+							}
 						}
 					}
 					showHiveNumbers = false
@@ -702,24 +728,27 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					})
 				}
 				userHive := hiveService.CreateHive(event.User().ID)
-				for _, bh := range h.Map()["bees"].(primitive.D) {
-					be := bh.Value.(primitive.D)
-					id := be.Map()["id"].(string)
-					level := be.Map()["level"].(int32)
-					gifted := be.Map()["gifted"].(bool)
-					beequip, ok := be.Map()["beequip"].(string)
-					mutation, ok2 := be.Map()["mutation"].(string)
-					if !ok || beequip == "" {
-						beequip = "None"
+				for _, bl := range h.Map()["bees"].(primitive.D) {
+					key := bl.Key
+					for _, bh := range bl.Value.(primitive.A) {
+						be := bh.(primitive.D)
+						id := be.Map()["id"].(string)
+						level := be.Map()["level"].(int32)
+						gifted := be.Map()["gifted"].(bool)
+						beequip, ok := be.Map()["beequip"].(string)
+						mutation, ok2 := be.Map()["mutation"].(string)
+						if !ok || beequip == "" {
+							beequip = "None"
+						}
+						if !ok2 {
+							mutation = "None"
+						}
+						bee := hive.NewBee(int(level), id, gifted)
+						bee.SetBeequip(beequip)
+						bee.SetMutation(mutation)
+						i, _ := strconv.ParseInt(key, 10, 64)
+						userHive.AddBee(bee, int(i))
 					}
-					if !ok2 {
-						mutation = "None"
-					}
-					bee := hive.NewBee(int(level), id, gifted)
-					bee.SetBeequip(beequip)
-					bee.SetMutation(mutation)
-					i, _ := strconv.ParseInt(bh.Key, 10, 64)
-					userHive.AddBee(bee, int(i))
 				}
 				return event.CreateMessage(discord.MessageCreate{
 					Content: "Loaded hive.",
@@ -935,8 +964,10 @@ func GiftAllButton(b *common.Bot, hiveService *State) handler.Component {
 				})
 				return err
 			}
-			for _, b := range h.GetBees() {
-				b.SetGifted(true)
+			for _, beesList := range h.GetBees() {
+				for _, bee := range beesList {
+					bee.SetGifted(true)
+				}
 			}
 			showHiveNumbers := false
 			if shn == "1" {
@@ -1006,8 +1037,10 @@ func SetLevelModal(hiveService *State) handler.Modal {
 					Flags:   discord.MessageFlagEphemeral,
 				})
 			}
-			for _, b := range h.GetBees() {
-				b.SetLevel(levelInt)
+			for _, beesList := range h.GetBees() {
+				for _, bee := range beesList {
+					bee.SetLevel(levelInt)
+				}
 			}
 			return event.CreateMessage(discord.MessageCreate{
 				Content: "Set level of all bees to " + levelStr,
@@ -1038,23 +1071,25 @@ func HiveInfoButton(hiveService *State) handler.Component {
 				Count    int
 				Beequips map[string]int
 			})
-			for _, bee := range h.GetBees() {
-				if b, ok := bees[bee.Name()]; ok {
-					b.Count++
-					if bee.Beequip() != "None" {
-						b.Beequips[bee.Beequip()]++
-					}
-					bees[bee.Name()] = b
-				} else {
-					bees[bee.Name()] = struct {
-						Count    int
-						Beequips map[string]int
-					}{
-						Count:    1,
-						Beequips: map[string]int{},
-					}
-					if bee.Beequip() != "None" {
-						bees[bee.Name()].Beequips[bee.Beequip()]++
+			for _, beeslist := range h.GetBees() {
+				for _, bee := range beeslist {
+					if b, ok := bees[bee.Name()]; ok {
+						b.Count++
+						if bee.Beequip() != "None" {
+							b.Beequips[bee.Beequip()]++
+						}
+						bees[bee.Name()] = b
+					} else {
+						bees[bee.Name()] = struct {
+							Count    int
+							Beequips map[string]int
+						}{
+							Count:    1,
+							Beequips: map[string]int{},
+						}
+						if bee.Beequip() != "None" {
+							bees[bee.Name()].Beequips[bee.Beequip()]++
+						}
 					}
 				}
 			}
@@ -1107,14 +1142,16 @@ func MutationInfoButton(hiveService *State) handler.Component {
 				})
 			}
 			mutationData := make(map[string]map[string]int)
-			for _, bee := range h.GetBees() {
-				if bee.Mutation() == "None" {
-					continue
+			for _, beeslist := range h.GetBees() {
+				for _, bee := range beeslist {
+					if bee.Mutation() == "None" {
+						continue
+					}
+					if mutationData[bee.Mutation()] == nil {
+						mutationData[bee.Mutation()] = make(map[string]int)
+					}
+					mutationData[bee.Mutation()][bee.Name()]++
 				}
-				if mutationData[bee.Mutation()] == nil {
-					mutationData[bee.Mutation()] = make(map[string]int)
-				}
-				mutationData[bee.Mutation()][bee.Name()]++
 			}
 			content := ""
 			for mutationName, info := range mutationData {

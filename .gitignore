@@ -8,3 +8,5 @@ hive-bot-dev
 
 # temp files
 hives.json
+
+migrations/venv

@@ -13,8 +13,11 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"strconv"
+	"sync"
 	"time"
 )
+
+var fileMutex = sync.Mutex{}
 
 func LoadHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
 	hives, err := jsonCacheService.LoadHives("hives.json")
@@ -25,25 +28,32 @@ func LoadHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *d
 	b.Logger.Info(fmt.Sprintf("Loading %d hives", len(hives)))
 	for _, cachedUser := range hives {
 		h := hiveService.CreateHive(snowflake.MustParse(cachedUser.Id))
-		for idx, cachedBee := range cachedUser.Hive {
-			h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
-			h.GetBee(idx).SetBeequip(cachedBee.Beequip)
-			h.GetBee(idx).SetMutation(cachedBee.Mutation)
+		for idx, cachedBees := range cachedUser.Hive {
+			for _, cachedBee := range cachedBees {
+				h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
+				pos := len(h.GetBeesAt(idx)) - 1
+				h.GetBeesAt(idx)[pos].SetBeequip(cachedBee.Beequip)
+				h.GetBeesAt(idx)[pos].SetMutation(cachedBee.Mutation)
+			}
 		}
 	}
 }
 
 func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
+	// acquire lock
+	fileMutex.Lock()
 	cachedUsers := make([]database.CachedUser, 0)
 	for id, h := range hiveService.Hives() {
 		cachedHive := make(database.CachedHive)
-		for idx, bee := range h.GetBees() {
-			cachedHive[idx] = database.CachedBee{
-				Id:       bee.Id(),
-				Level:    bee.Level(),
-				Gifted:   bee.Gifted(),
-				Beequip:  bee.Beequip(),
-				Mutation: bee.Mutation(),
+		for idx, bees := range h.GetBees() {
+			for _, bee := range bees {
+				cachedHive[idx] = append(cachedHive[idx], database.CachedBee{
+					Id:       bee.Id(),
+					Level:    bee.Level(),
+					Gifted:   bee.Gifted(),
+					Beequip:  bee.Beequip(),
+					Mutation: bee.Mutation(),
+				})
 			}
 		}
 		cachedUsers = append(cachedUsers, database.CachedUser{
@@ -57,6 +67,8 @@ func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService 
 		return
 	}
 	b.Logger.Info(fmt.Sprintf("Backed up %d hives", len(cachedUsers)))
+	// release lock
+	fileMutex.Unlock()
 }
 
 func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) handler.Command {
@@ -173,13 +185,15 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService
 				cachedUsers := make([]database.CachedUser, 0)
 				for id, h := range hiveService.Hives() {
 					cachedHive := make(database.CachedHive)
-					for idx, bee := range h.GetBees() {
-						cachedHive[idx] = database.CachedBee{
-							Id:       bee.Id(),
-							Level:    bee.Level(),
-							Gifted:   bee.Gifted(),
-							Beequip:  bee.Beequip(),
-							Mutation: bee.Mutation(),
+					for idx, bees := range h.GetBees() {
+						for _, bee := range bees {
+							cachedHive[idx] = append(cachedHive[idx], database.CachedBee{
+								Id:       bee.Id(),
+								Level:    bee.Level(),
+								Gifted:   bee.Gifted(),
+								Beequip:  bee.Beequip(),
+								Mutation: bee.Mutation(),
+							})
 						}
 					}
 					cachedUsers = append(cachedUsers, database.CachedUser{
@@ -200,10 +214,13 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService
 				}
 				for _, cachedUser := range hives {
 					h := hiveService.CreateHive(snowflake.MustParse(cachedUser.Id))
-					for idx, cachedBee := range cachedUser.Hive {
-						h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
-						h.GetBee(idx).SetBeequip(cachedBee.Beequip)
-						h.GetBee(idx).SetMutation(cachedBee.Mutation)
+					for idx, cachedBees := range cachedUser.Hive {
+						for _, cachedBee := range cachedBees {
+							h.AddBee(hive.NewBee(cachedBee.Level, cachedBee.Id, cachedBee.Gifted), idx)
+							pos := len(h.GetBeesAt(idx)) - 1
+							h.GetBeesAt(idx)[pos].SetBeequip(cachedBee.Beequip)
+							h.GetBeesAt(idx)[pos].SetMutation(cachedBee.Mutation)
+						}
 					}
 				}
 				return event.CreateMessage(discord.MessageCreate{Content: "ok"})

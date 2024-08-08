@@ -9,26 +9,30 @@ import (
 )
 
 type Hive struct {
-	bees map[int]*Bee
+	bees map[int][]*Bee
 }
 
 func NewHive() *Hive {
-	return &Hive{make(map[int]*Bee)}
+	return &Hive{make(map[int][]*Bee)}
 }
 
 func (h *Hive) AddBee(b *Bee, index int) {
-	h.bees[index] = b
+	h.bees[index] = append(h.bees[index], b)
 }
 
 func (h *Hive) RemoveBee(index int) {
 	delete(h.bees, index)
 }
 
-func (h *Hive) GetBee(index int) *Bee {
+func (h *Hive) RemoveBeeAt(index int, beeIndex int) {
+	h.bees[index] = append(h.bees[index][:beeIndex], h.bees[index][beeIndex+1:]...)
+}
+
+func (h *Hive) GetBeesAt(index int) []*Bee {
 	return h.bees[index]
 }
 
-func (h *Hive) GetBees() map[int]*Bee {
+func (h *Hive) GetBees() map[int][]*Bee {
 	return h.bees
 }
 
@@ -37,7 +41,11 @@ func (h *Hive) ToBson() bson.D {
 	for i := 0; i < 50; i++ {
 		bee := h.bees[i+1]
 		if bee != nil {
-			bees = append(bees, bson.E{Key: strconv.Itoa(i + 1), Value: bee.ToBson()})
+			beeList := bson.A{}
+			for _, b := range bee {
+				beeList = append(beeList, b.ToBson())
+			}
+			bees = append(bees, bson.E{Key: strconv.Itoa(i + 1), Value: beeList})
 		}
 	}
 	return bson.D{{"bees", bees}}
@@ -82,7 +90,7 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, sk
 					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
 				}
 				if bee != nil && !common.ArrayIncludes(skipHiveNumbers, hiveNumber) {
-					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
+					postProcessFuncs = append(postProcessFuncs, DrawBees(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)
@@ -114,7 +122,7 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, sk
 					dc.DrawStringAnchored(strconv.Itoa(hiveNumber), float64(x), float64(y), 0.5, 0.5)
 				}
 				if bee != nil && !common.ArrayIncludes(skipHiveNumbers, hiveNumber) {
-					postProcessFuncs = append(postProcessFuncs, DrawBee(bee, dc, x, y))
+					postProcessFuncs = append(postProcessFuncs, DrawBees(bee, dc, x, y))
 				} else {
 					dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 					dc.SetHexColor(bgColor)

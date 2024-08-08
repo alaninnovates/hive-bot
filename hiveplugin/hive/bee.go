@@ -4,6 +4,7 @@ import (
 	"alaninnovates.com/hive-bot/common/loaders"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
+	"math"
 	"strconv"
 )
 
@@ -71,7 +72,57 @@ func (b *Bee) ToBson() bson.D {
 	}
 }
 
-func DrawBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
+func DrawBees(b []*Bee, dc *gg.Context, x int, y int) map[string]func() {
+	if len(b) == 1 {
+		return drawOneBee(b[0], dc, x, y)
+	}
+
+	/*
+		apothem: a=rcos(180/n)
+	*/
+	a := 40 * math.Cos(180/float64(6)*math.Pi/180)
+
+	n := 6
+	r := 40
+	centerAng := 2 * math.Pi / float64(n)
+	startAng := 0
+
+	cornersX := make([]float64, n)
+	cornersY := make([]float64, n)
+	for i := 0; i < n; i++ {
+		ang := float64(startAng) + (float64(i) * centerAng)
+		cornersX[i] = float64(x) + float64(r)*math.Cos(ang)
+		cornersY[i] = float64(y) - float64(r)*math.Sin(ang)
+	}
+
+	dc.NewSubPath()
+	dc.MoveTo(float64(x-r), float64(y)-a)
+	dc.LineTo(cornersX[1], cornersY[1])
+	dc.LineTo(cornersX[4], cornersY[4])
+	dc.LineTo(float64(x-r), float64(y)+a)
+	dc.ClosePath()
+	dc.Clip()
+
+	funcs := drawOneBee(b[0], dc, x, y)
+
+	dc.ResetClip()
+
+	dc.NewSubPath()
+	dc.MoveTo(float64(x+r), float64(y)-a)
+	dc.LineTo(cornersX[1], cornersY[1])
+	dc.LineTo(cornersX[4], cornersY[4])
+	dc.LineTo(float64(x+r), float64(y)+a)
+	dc.ClosePath()
+	dc.Clip()
+
+	funcs = drawOneBee(b[1], dc, x, y)
+
+	dc.ResetClip()
+
+	return funcs
+}
+
+func drawOneBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
 	face, beeMeta := loaders.GetBee(b.id)
 	switch beeMeta.Kind {
 	case loaders.Common:
