@@ -324,15 +324,21 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				if !ValidateRange(slots, 1, 50) {
 					return event.CreateMessage(InvalidSlotsMessage)
 				}
+				slotClearWarning := false
 				for _, slot := range GetRangeNumbers(slots) {
 					if len(h.GetBeesAt(slot)) > 1 {
+						slotClearWarning = true
 						// clear the first bee
 						h.RemoveBeeAt(slot, 0)
 					}
 					h.AddBee(hive.NewBee(level, loaders.GetBeeId(name), gifted), slot)
 				}
+				messageAppend := ""
+				if slotClearWarning {
+					messageAppend = "\nWarning: Some slots had more than two bees specified! The first bee was removed. To clear slots, use the `/hive remove` command"
+				}
 				return event.CreateMessage(discord.MessageCreate{
-					Content: "Added bee(s) to hive.\nYou can now see your hive by using `/hive view` command",
+					Content: "Added bee(s) to hive.\nYou can now see your hive by using `/hive view` command" + messageAppend,
 				})
 			},
 			"remove": func(event *events.ApplicationCommandInteractionCreate) error {
