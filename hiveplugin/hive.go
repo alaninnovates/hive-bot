@@ -58,8 +58,6 @@ func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHi
 	bg, _ := gg.LoadImage(loaders.GetHiveBackgroundImagePath(background))
 	hiveImage := gg.NewContextForImage(bg)
 	hiveImage.DrawImageAnchored(img, hiveImage.Width()/2, hiveImage.Height()/2, 0.5, 0.5)
-	//tmImage, _ := gg.LoadPNG("assets/trademark.png")
-	//hiveImage.DrawImageAnchored(tmImage, hiveImage.Width()/2, 8, 0.5, 0)
 	return common.ImageToPipe(hiveImage.Image())
 }
 
