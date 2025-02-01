@@ -506,22 +506,6 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				// START: render by ability
 				renderAbility, provided := data.OptString("ability")
 				if provided {
-					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
-					if err != nil {
-						return err
-					}
-					if premiumLevel < common.PremiumLevelBuilder {
-						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-							Embeds: &[]discord.Embed{
-								{
-									Title:       "Premium Only Feature",
-									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
-									Color:       0x800080,
-								},
-							},
-						})
-						return err
-					}
 					for i, bees := range h.GetBees() {
 						oneBeeFlag := false
 						for _, bee := range bees {
@@ -542,22 +526,6 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				// START: render by beequip
 				renderBeequip, provided := data.OptString("beequip")
 				if provided {
-					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
-					if err != nil {
-						return err
-					}
-					if premiumLevel < common.PremiumLevelBuilder {
-						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-							Embeds: &[]discord.Embed{
-								{
-									Title:       "Premium Only Feature",
-									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
-									Color:       0x800080,
-								},
-							},
-						})
-						return err
-					}
 					for i, bees := range h.GetBees() {
 						for _, bee := range bees {
 							if renderBeequip != bee.Beequip() {
@@ -572,22 +540,6 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 				// START: render by slots
 				slots, provided := data.OptString("slots")
 				if provided {
-					premiumLevel, err := common.GetPremiumLevel(b.Db, event.User().ID)
-					if err != nil {
-						return err
-					}
-					if premiumLevel < common.PremiumLevelBuilder {
-						_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
-							Embeds: &[]discord.Embed{
-								{
-									Title:       "Premium Only Feature",
-									Description: "This feature is only available to :sparkles: premium users. You can get premium by donating [here](https://meta-bee.my.to/donate)!",
-									Color:       0x800080,
-								},
-							},
-						})
-						return err
-					}
 					if !ValidateRange(slots, 1, 50) {
 						return event.CreateMessage(InvalidSlotsMessage)
 					}
@@ -1223,10 +1175,11 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.Component {
 			})
 			if err != nil {
 				cause := ""
-				if strings.Contains(err.Error(), "403") {
-					cause = "I didn't have permission to edit that message!"
+				if strings.Contains(err.Error(), "403") || strings.Contains(err.Error(), "Missing Access") {
+					cause = "I didn't have permission to edit that message! Please make sure I have edit message permissions in this channel."
 				} else {
 					cause = "Something went wrong!"
+					b.Logger.Error("Error rerendering hive: ", err)
 				}
 				_, err = b.Client.Rest().UpdateInteractionResponse(b.Client.ApplicationID(), event.Token(), discord.MessageUpdate{
 					Content: json.Ptr("Failed to re-render hive: " + cause),
