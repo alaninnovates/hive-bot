@@ -1,4 +1,4 @@
-FROM golang:1.19-alpine
+FROM golang:1.22-alpine as build
 
 WORKDIR /hive-builder
 
@@ -8,6 +8,16 @@ RUN go mod download
 
 COPY . .
 
-RUN go build -o /hive-bot
+RUN go build -o /hive-builder-bot .
 
-CMD [ "/hive-bot" ]
+
+FROM alpine
+
+COPY --from=build /hive-builder-bot /hive-builder-bot
+COPY --from=build /hive-builder/assets /assets
+
+RUN mkdir -p /data && echo "[]" > /data/hives.json
+
+VOLUME /data
+
+CMD ["/hive-builder-bot"]

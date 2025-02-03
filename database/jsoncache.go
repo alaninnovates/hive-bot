@@ -16,8 +16,9 @@ type CachedBee struct {
 type CachedHive map[int][]CachedBee
 
 type CachedUser struct {
-	Id   string
-	Hive CachedHive
+	Id           string
+	Hive         CachedHive
+	LastModified int64
 }
 
 type JsonCache struct {

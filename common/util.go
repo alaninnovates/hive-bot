@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"io"
 	"math/rand"
+	"time"
 )
 
 func ImageToPipe(image image.Image) *io.PipeReader {
@@ -35,4 +36,8 @@ func ArrayIncludes[T comparable](array []T, value T) bool {
 		}
 	}
 	return false
+}
+
+func CurrentTimeMillis() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
 }

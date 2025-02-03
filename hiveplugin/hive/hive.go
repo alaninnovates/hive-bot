@@ -9,23 +9,27 @@ import (
 )
 
 type Hive struct {
-	bees map[int][]*Bee
+	bees         map[int][]*Bee
+	lastModified int64
 }
 
 func NewHive() *Hive {
-	return &Hive{make(map[int][]*Bee)}
+	return &Hive{make(map[int][]*Bee), 0}
 }
 
 func (h *Hive) AddBee(b *Bee, index int) {
 	h.bees[index] = append(h.bees[index], b)
+	h.lastModified = common.CurrentTimeMillis()
 }
 
 func (h *Hive) RemoveBee(index int) {
 	delete(h.bees, index)
+	h.lastModified = common.CurrentTimeMillis()
 }
 
 func (h *Hive) RemoveBeeAt(index int, beeIndex int) {
 	h.bees[index] = append(h.bees[index][:beeIndex], h.bees[index][beeIndex+1:]...)
+	h.lastModified = common.CurrentTimeMillis()
 }
 
 func (h *Hive) GetBeesAt(index int) []*Bee {
@@ -34,6 +38,10 @@ func (h *Hive) GetBeesAt(index int) []*Bee {
 
 func (h *Hive) GetBees() map[int][]*Bee {
 	return h.bees
+}
+
+func (h *Hive) LastModified() int64 {
+	return h.lastModified
 }
 
 func (h *Hive) ToBson() bson.D {
@@ -59,6 +67,7 @@ var (
 )
 
 func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, skipHiveNumbers []int) {
+	h.lastModified = common.CurrentTimeMillis()
 	//dc.SetHexColor(bgColor)
 	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()

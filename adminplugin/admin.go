@@ -20,7 +20,7 @@ import (
 var fileMutex = sync.Mutex{}
 
 func LoadHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) {
-	hives, err := jsonCacheService.LoadHives("hives.json")
+	hives, err := jsonCacheService.LoadHives("data/hives.json")
 	if err != nil {
 		b.Logger.Error("Failed to load hives: %v", err)
 		return
@@ -57,11 +57,12 @@ func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService 
 			}
 		}
 		cachedUsers = append(cachedUsers, database.CachedUser{
-			Id:   id.String(),
-			Hive: cachedHive,
+			Id:           id.String(),
+			Hive:         cachedHive,
+			LastModified: h.LastModified(),
 		})
 	}
-	err := jsonCacheService.SaveHives("hives.json", cachedUsers)
+	err := jsonCacheService.SaveHives("data/hives.json", cachedUsers)
 	if err != nil {
 		b.Logger.Error("Failed to back up hives: %v", err)
 		return
@@ -69,6 +70,14 @@ func BackupHives(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService 
 	b.Logger.Info(fmt.Sprintf("Backed up %d hives", len(cachedUsers)))
 	// release lock
 	fileMutex.Unlock()
+}
+
+func PruneHives(b *common.Bot, hiveService *hiveplugin.State) {
+	for id, h := range hiveService.Hives() {
+		if h.LastModified() < common.CurrentTimeMillis()-1000*60*60 {
+			hiveService.DeleteHive(id)
+		}
+	}
 }
 
 func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService *database.JsonCache) handler.Command {
@@ -201,14 +210,14 @@ func AdminCommand(b *common.Bot, hiveService *hiveplugin.State, jsonCacheService
 						Hive: cachedHive,
 					})
 				}
-				err := jsonCacheService.SaveHives("hives.json", cachedUsers)
+				err := jsonCacheService.SaveHives("data/hives.json", cachedUsers)
 				if err != nil {
 					return event.CreateMessage(discord.MessageCreate{Content: err.Error()})
 				}
 				return event.CreateMessage(discord.MessageCreate{Content: "ok"})
 			},
 			"json-load-hives": func(event *events.ApplicationCommandInteractionCreate) error {
-				hives, err := jsonCacheService.LoadHives("hives.json")
+				hives, err := jsonCacheService.LoadHives("data/hives.json")
 				if err != nil {
 					return event.CreateMessage(discord.MessageCreate{Content: err.Error()})
 				}
@@ -244,6 +253,7 @@ func Initialize(h *handler.Handler, b *common.Bot, hiveService *hiveplugin.State
 				for {
 					select {
 					case <-ticker.C:
+						PruneHives(b, hiveService)
 						BackupHives(b, hiveService, jsonCacheService)
 					}
 				}

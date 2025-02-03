@@ -23,6 +23,10 @@ func (s *State) GetHive(userID snowflake.ID) *hive.Hive {
 	return s.users[userID]
 }
 
+func (s *State) DeleteHive(userID snowflake.ID) {
+	delete(s.users, userID)
+}
+
 func (s *State) HiveCount() int {
 	return len(s.users)
 }
