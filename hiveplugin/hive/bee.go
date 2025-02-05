@@ -80,8 +80,10 @@ func (b *Bee) ToBson() bson.D {
 
 func DrawBees(b []*Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	if len(b) == 1 {
-		return drawOneBee(b[0], dc, x, y)
+		return drawOneBee(b[0], dc, x, y, 0)
 	}
+
+	faceOffset := 5
 
 	/*
 		apothem: a=rcos(180/n)
@@ -109,7 +111,7 @@ func DrawBees(b []*Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	dc.ClosePath()
 	dc.Clip()
 
-	funcs := drawOneBee(b[0], dc, x, y)
+	funcs := drawOneBee(b[0], dc, x, y, -faceOffset)
 
 	dc.ResetClip()
 
@@ -121,14 +123,19 @@ func DrawBees(b []*Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	dc.ClosePath()
 	dc.Clip()
 
-	funcs = drawOneBee(b[1], dc, x, y)
+	funcs = drawOneBee(b[1], dc, x, y, faceOffset)
 
 	dc.ResetClip()
+
+	dc.SetHexColor("#7d5a2f")
+	dc.SetLineWidth(2)
+	dc.DrawLine(cornersX[1], cornersY[1], cornersX[4], cornersY[4])
+	dc.Stroke()
 
 	return funcs
 }
 
-func drawOneBee(b *Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
+func drawOneBee(b *Bee, dc *gg.Context, x int, y int, faceOffset int) BeeRenderingFuncs {
 	face, beeMeta := loaders.GetBee(b.id)
 	switch beeMeta.Kind {
 	case loaders.Common:
@@ -146,7 +153,7 @@ func drawOneBee(b *Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	}
 	dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 	dc.Fill()
-	dc.DrawImageAnchored(face, x, y, 0.5, 0.5)
+	dc.DrawImageAnchored(face, x, y+faceOffset, 0.5, 0.5)
 	funcs := BeeRenderingFuncs{
 		gifted: func() {
 			if b.gifted {
