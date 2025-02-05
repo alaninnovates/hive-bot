@@ -8,6 +8,12 @@ import (
 	"strconv"
 )
 
+type BeeRenderingFuncs struct {
+	gifted  func()
+	beequip func()
+	level   func()
+}
+
 type Bee struct {
 	level    int
 	id       string
@@ -72,7 +78,7 @@ func (b *Bee) ToBson() bson.D {
 	}
 }
 
-func DrawBees(b []*Bee, dc *gg.Context, x int, y int) map[string]func() {
+func DrawBees(b []*Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	if len(b) == 1 {
 		return drawOneBee(b[0], dc, x, y)
 	}
@@ -122,7 +128,7 @@ func DrawBees(b []*Bee, dc *gg.Context, x int, y int) map[string]func() {
 	return funcs
 }
 
-func drawOneBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
+func drawOneBee(b *Bee, dc *gg.Context, x int, y int) BeeRenderingFuncs {
 	face, beeMeta := loaders.GetBee(b.id)
 	switch beeMeta.Kind {
 	case loaders.Common:
@@ -141,39 +147,38 @@ func drawOneBee(b *Bee, dc *gg.Context, x int, y int) map[string]func() {
 	dc.DrawRegularPolygon(6, float64(x), float64(y), 40, 0)
 	dc.Fill()
 	dc.DrawImageAnchored(face, x, y, 0.5, 0.5)
-	funcs := make(map[string]func())
-	funcs["gifted"] = func() {
-		if b.gifted {
-			dc.SetLineWidth(4)
-			dc.SetHexColor("#ffff00")
-			dc.DrawRegularPolygon(6, float64(x), float64(y), 42, 0)
-			dc.Stroke()
-		}
-	}
-	funcs["beequip"] = func() {
-		if b.beequip != "None" {
-			dc.DrawImageAnchored(loaders.GetBeequipImage(b.beequip), x+15, y+15, 0.5, 0)
-		}
-	}
-	funcs["level"] = func() {
-		if b.level != 0 {
-			dc.SetHexColor("#000000")
-			//todo: this border drawing function creates cpu spikes, find a better way to do this
-			n := 3
-			for dy := -n; dy <= n; dy++ {
-				for dx := -n; dx <= n; dx++ {
-					if dx*dx+dy*dy >= n*n {
-						continue
-					}
-					//println("drawing", dx, dy)
-					xx := float64(x - 60 + dx)
-					yy := float64(y - 10 + dy)
-					dc.DrawStringAnchored(strconv.Itoa(b.level), xx, yy, 0, 0.5)
-				}
+	funcs := BeeRenderingFuncs{
+		gifted: func() {
+			if b.gifted {
+				dc.SetLineWidth(4)
+				dc.SetHexColor("#ffff00")
+				dc.DrawRegularPolygon(6, float64(x), float64(y), 42, 0)
+				dc.Stroke()
 			}
-			dc.SetHexColor(loaders.GetMutation(b.mutation))
-			dc.DrawStringAnchored(strconv.Itoa(b.level), float64(x-60), float64(y-10), 0, 0.5)
-		}
+		},
+		beequip: func() {
+			if b.beequip != "None" {
+				dc.DrawImageAnchored(loaders.GetBeequipImage(b.beequip), x+15, y+15, 0.5, 0)
+			}
+		},
+		level: func() {
+			if b.level != 0 {
+				levelText := strconv.Itoa(b.level)
+				textX := float64(x - 60)
+				textY := float64(y - 10)
+
+				dc.SetHexColor("#000000")
+				n := 2
+				for i := -n; i <= n; i += n * 2 {
+					for j := -n; j <= n; j += n * 2 {
+						dc.DrawStringAnchored(levelText, textX+float64(i), textY+float64(j), 0, 0.5)
+					}
+				}
+
+				dc.SetHexColor(loaders.GetMutation(b.mutation))
+				dc.DrawStringAnchored(levelText, textX, textY, 0, 0.5)
+			}
+		},
 	}
 	return funcs
 }

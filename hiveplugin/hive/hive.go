@@ -72,7 +72,7 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, sk
 	//dc.DrawRectangle(0, 0, float64(dc.Width()), float64(dc.Height()))
 	dc.Fill()
 	bottom := dc.Height()
-	postProcessFuncs := make([]map[string]func(), 0)
+	postProcessFuncs := make([]BeeRenderingFuncs, 0)
 	for i := 0; i < 10; i++ {
 		bottomCnt := 0
 		topCnt := 0
@@ -164,11 +164,11 @@ func DrawHive(h *Hive, dc *gg.Context, showHiveNumbers bool, slotsOnTop bool, sk
 	for i := 0; i < 3; i++ {
 		for _, f := range postProcessFuncs {
 			if i == 0 {
-				f["gifted"]()
+				f.gifted()
 			} else if i == 1 {
-				f["beequip"]()
+				f.beequip()
 			} else if i == 2 {
-				f["level"]()
+				f.level()
 			}
 		}
 	}
