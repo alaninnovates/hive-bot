@@ -730,7 +730,7 @@ func HiveCommand(b *common.Bot, hiveService *State) handler.Command {
 					name := result.Map()["name"].(string)
 					saves = append(saves, fmt.Sprintf("%d. %s (`%s`)", i+1, name, id))
 					row = row.AddComponents(discord.NewPrimaryButton(name, fmt.Sprintf("handler:save-id:%s:%s", event.User().ID.String(), id)))
-					if i%5 == 0 && i != 0 {
+					if i%4 == 0 && i != 0 {
 						rows = append(rows, row)
 						row = discord.ActionRowComponent{}
 					}
