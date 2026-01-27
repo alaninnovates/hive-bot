@@ -7,6 +7,9 @@ var mutations = map[string]string{
 	"Gather Amount":    "#9DD678",
 	"Energy":           "#8FC1CA",
 	"Bee Ability Rate": "#A792CA",
+	"Movespeed":        "#6AC7F3",
+	//"Instant Conversion": "",
+	//"Critical Chance": "",
 }
 
 func GetMutation(name string) string {
