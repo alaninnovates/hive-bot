@@ -1,10 +1,11 @@
 package common
 
 import (
+	"strings"
+
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
-	"strings"
 )
 
 func UserIDCheck() handler.Check[*events.ComponentInteractionCreate] {

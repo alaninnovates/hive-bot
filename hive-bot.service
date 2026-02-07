@@ -1,0 +1,14 @@
+[Unit]
+Description=Hive Bot Service
+DefaultDependencies=no
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/alan/hive-bot
+ExecStart=/home/alan/hive-bot/hive-bot-amd64
+TimeoutStartSec=0
+
+[Install]
+WantedBy=default.target
+

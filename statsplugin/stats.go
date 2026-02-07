@@ -1,18 +1,19 @@
 package statsplugin
 
 import (
-	"alaninnovates.com/hive-bot/common"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/handler"
 	"io"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
+
+	"alaninnovates.com/hive-bot/common"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/handler"
 )
 
 var (

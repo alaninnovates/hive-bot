@@ -1,11 +1,12 @@
 package hive
 
 import (
+	"image/color"
+	"strconv"
+
 	"alaninnovates.com/hive-bot/common"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
-	"image/color"
-	"strconv"
 )
 
 type Hive struct {

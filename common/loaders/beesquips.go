@@ -1,11 +1,12 @@
 package loaders
 
 import (
-	"github.com/fogleman/gg"
 	"image"
 	"io/fs"
 	"os"
 	"strings"
+
+	"github.com/fogleman/gg"
 )
 
 func GetBeequipImage(name string) image.Image {

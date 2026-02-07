@@ -1,17 +1,18 @@
 package gameplugin
 
 import (
-	"alaninnovates.com/hive-bot/common"
 	"context"
+	"strconv"
+	"strings"
+	"time"
+
+	"alaninnovates.com/hive-bot/common"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
 	"github.com/disgoorg/snowflake/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strconv"
-	"strings"
-	"time"
 )
 
 func GetBubbleComponents(gameService *State, userId snowflake.ID) []discord.ContainerComponent {

@@ -1,6 +1,13 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"alaninnovates.com/hive-bot/adminplugin"
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
@@ -9,8 +16,6 @@ import (
 	"alaninnovates.com/hive-bot/hiveplugin"
 	"alaninnovates.com/hive-bot/miscplugin"
 	"alaninnovates.com/hive-bot/statsplugin"
-	"context"
-	"flag"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -20,10 +25,6 @@ import (
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
-	"log/slog"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 func main() {

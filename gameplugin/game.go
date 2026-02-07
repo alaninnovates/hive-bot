@@ -1,12 +1,13 @@
 package gameplugin
 
 import (
+	"strings"
+
 	"alaninnovates.com/hive-bot/common"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
 	"github.com/disgoorg/json"
-	"strings"
 )
 
 func GameCommand(b *common.Bot, gameService *State) handler.Command {

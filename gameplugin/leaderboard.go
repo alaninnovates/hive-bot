@@ -1,10 +1,11 @@
 package gameplugin
 
 import (
-	"alaninnovates.com/hive-bot/common"
-	"alaninnovates.com/hive-bot/database"
 	"context"
 	"fmt"
+
+	"alaninnovates.com/hive-bot/common"
+	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"go.mongodb.org/mongo-driver/bson"

@@ -3,6 +3,7 @@ package hiveplugin
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/qri-io/jsonschema"
 )
 

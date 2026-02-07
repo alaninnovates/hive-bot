@@ -1,11 +1,12 @@
 package hive
 
 import (
+	"math"
+	"strconv"
+
 	"alaninnovates.com/hive-bot/common/loaders"
 	"github.com/fogleman/gg"
 	"go.mongodb.org/mongo-driver/bson"
-	"math"
-	"strconv"
 )
 
 type BeeRenderingFuncs struct {

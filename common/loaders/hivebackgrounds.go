@@ -1,10 +1,11 @@
 package loaders
 
 import (
-	"github.com/disgoorg/disgo/discord"
 	"io/fs"
 	"os"
 	"strings"
+
+	"github.com/disgoorg/disgo/discord"
 )
 
 func GetHiveBackgroundImagePath(name string) string {

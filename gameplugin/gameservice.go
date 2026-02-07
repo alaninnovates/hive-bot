@@ -1,9 +1,10 @@
 package gameplugin
 
 import (
-	"github.com/disgoorg/snowflake/v2"
 	"math"
 	"time"
+
+	"github.com/disgoorg/snowflake/v2"
 )
 
 type IdentifyGameUser struct {

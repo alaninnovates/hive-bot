@@ -1,9 +1,10 @@
 package common
 
 import (
+	"log/slog"
+
 	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/bot"
-	"log/slog"
 )
 
 type Bot struct {

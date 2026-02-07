@@ -1,9 +1,10 @@
 package loaders
 
 import (
-	"github.com/fogleman/gg"
 	"image"
 	"sort"
+
+	"github.com/fogleman/gg"
 )
 
 func GetBee(id string) (image.Image, BeeMeta) {

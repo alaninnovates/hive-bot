@@ -1,10 +1,14 @@
 package gameplugin
 
 import (
-	"alaninnovates.com/hive-bot/common"
-	"alaninnovates.com/hive-bot/database"
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"alaninnovates.com/hive-bot/common"
+	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/handler"
@@ -13,9 +17,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"strconv"
-	"strings"
-	"time"
 )
 
 type TriviaDifficulty int

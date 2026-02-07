@@ -1,18 +1,19 @@
 package gameplugin
 
 import (
-	"alaninnovates.com/hive-bot/common"
-	"alaninnovates.com/hive-bot/common/loaders"
 	"fmt"
-	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/handler"
-	"github.com/fogleman/gg"
 	"image"
 	"io"
 	"math/rand"
 	"strconv"
 	"strings"
+
+	"alaninnovates.com/hive-bot/common"
+	"alaninnovates.com/hive-bot/common/loaders"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/handler"
+	"github.com/fogleman/gg"
 )
 
 type IdentifyAnswerChoice struct {
