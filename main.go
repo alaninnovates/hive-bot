@@ -12,6 +12,7 @@ import (
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
 	"alaninnovates.com/hive-bot/guideplugin"
+	"alaninnovates.com/hive-bot/hiveplugin"
 	"alaninnovates.com/hive-bot/miscplugin"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
@@ -79,8 +80,8 @@ func main() {
 
 	//go statsplugin.Initialize(r, hiveBot, devMode)
 	gameplugin.Initialize(r, hiveBot)
-	//hiveService := hiveplugin.NewHiveService()
-	//hiveplugin.Initialize(r, hiveBot, hiveService)
+	hiveService := hiveplugin.NewHiveService()
+	hiveplugin.Initialize(r, hiveBot, hiveService)
 	guideplugin.Initialize(r, hiveBot)
 	miscplugin.Initialize(r, hiveBot)
 
@@ -113,6 +114,7 @@ func main() {
 		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
 		logger.Info("Syncing commands...")
 		if err = handler.SyncCommands(hiveBot.Client, []discord.ApplicationCommandCreate{
+			hiveplugin.HiveCommandCreate,
 			gameplugin.GameCommandCreate,
 			guideplugin.GuidesCreateCommand,
 			miscplugin.HelpCommandCreate,
