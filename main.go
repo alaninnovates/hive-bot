@@ -8,12 +8,14 @@ import (
 	"os/signal"
 	"syscall"
 
+	"alaninnovates.com/hive-bot/adminplugin"
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
 	"alaninnovates.com/hive-bot/guideplugin"
 	"alaninnovates.com/hive-bot/hiveplugin"
 	"alaninnovates.com/hive-bot/miscplugin"
+	"alaninnovates.com/hive-bot/statsplugin"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -78,14 +80,11 @@ func main() {
 	r.Use(middleware.Go)
 	//r.Use(middleware.Logger)
 
-	//go statsplugin.Initialize(r, hiveBot, devMode)
 	gameplugin.Initialize(r, hiveBot)
 	hiveService := hiveplugin.NewHiveService()
 	hiveplugin.Initialize(r, hiveBot, hiveService)
 	guideplugin.Initialize(r, hiveBot)
 	miscplugin.Initialize(r, hiveBot)
-
-	//r.NotFound()
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithShardManagerConfigOpts(
@@ -106,20 +105,26 @@ func main() {
 		panic(err)
 	}
 
-	//if !devMode && syncCommands {
-	//	h.SyncCommands(hiveBot.Client)
-	//}
-	//adminplugin.Initialize(r, hiveBot, hiveService, devMode)
-	if devMode && syncCommands {
+	statsplugin.Initialize(r, hiveBot, devMode)
+	adminplugin.Initialize(r, hiveBot, hiveService, devMode)
+
+	if syncCommands {
 		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
 		logger.Info("Syncing commands...")
-		if err = handler.SyncCommands(hiveBot.Client, []discord.ApplicationCommandCreate{
+		commands := []discord.ApplicationCommandCreate{
 			hiveplugin.HiveCommandCreate,
 			gameplugin.GameCommandCreate,
 			guideplugin.GuidesCreateCommand,
 			miscplugin.HelpCommandCreate,
 			miscplugin.StatsCommandCreate,
-		}, []snowflake.ID{snowflake.GetEnv("GUILD_ID")}); err != nil {
+		}
+		var guilds []snowflake.ID
+		if devMode {
+			logger.Info("Developer mode enabled: Syncing commands to test guild only")
+			guilds = append(guilds, snowflake.GetEnv("GUILD_ID"))
+			commands = append(commands, adminplugin.AdminCommandCreate)
+		}
+		if err = handler.SyncCommands(hiveBot.Client, commands, guilds); err != nil {
 			logger.Error("error while syncing commands", slog.Any("err", err))
 			return
 		}

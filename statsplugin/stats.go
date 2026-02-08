@@ -8,12 +8,11 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"alaninnovates.com/hive-bot/common"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/handler"
+	"github.com/disgoorg/disgo/handler"
 )
 
 var (
@@ -77,10 +76,7 @@ func PostStats(b *common.Bot, state *State) {
 	state.ResetStats()
 }
 
-func Initialize(h *handler.Handler, b *common.Bot, devMode bool) {
-	for b.Client == nil {
-		time.Sleep(1)
-	}
+func Initialize(r *handler.Mux, b *common.Bot, devMode bool) {
 	if devMode {
 		b.Logger.Info("Not posting bot stats: Developer mode is enabled")
 		return
