@@ -8,21 +8,17 @@ import (
 	"os/signal"
 	"syscall"
 
-	"alaninnovates.com/hive-bot/adminplugin"
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
-	"alaninnovates.com/hive-bot/guideplugin"
-	"alaninnovates.com/hive-bot/hiveplugin"
-	"alaninnovates.com/hive-bot/miscplugin"
-	"alaninnovates.com/hive-bot/statsplugin"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/handler"
+	"github.com/disgoorg/disgo/handler/middleware"
 	"github.com/disgoorg/disgo/sharding"
-	"github.com/disgoorg/handler"
-	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
 )
@@ -75,13 +71,18 @@ func main() {
 		}
 	}()
 
-	h := handler.New(log.New(log.LstdFlags | log.Lshortfile))
-	go statsplugin.Initialize(h, hiveBot, devMode)
-	gameplugin.Initialize(h, hiveBot)
-	hiveService := hiveplugin.NewHiveService()
-	hiveplugin.Initialize(h, hiveBot, hiveService)
-	guideplugin.Initialize(h, hiveBot)
-	miscplugin.Initialize(h, hiveBot)
+	r := handler.New()
+	r.Use(middleware.Go)
+	//r.Use(middleware.Logger)
+
+	//go statsplugin.Initialize(r, hiveBot, devMode)
+	gameplugin.Initialize(r, hiveBot)
+	//hiveService := hiveplugin.NewHiveService()
+	//hiveplugin.Initialize(r, hiveBot, hiveService)
+	//guideplugin.Initialize(r, hiveBot)
+	//miscplugin.Initialize(r, hiveBot)
+
+	//r.NotFound()
 
 	if hiveBot.Client, err = disgo.New(token,
 		bot.WithShardManagerConfigOpts(
@@ -96,19 +97,25 @@ func main() {
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagGuilds),
 		),
-		bot.WithEventListeners(h),
+		bot.WithEventListeners(r),
 	); err != nil {
 		logger.Error("Failed to create disgo client")
 		panic(err)
 	}
 
-	if !devMode && syncCommands {
-		h.SyncCommands(hiveBot.Client)
-	}
-	adminplugin.Initialize(h, hiveBot, hiveService, devMode)
+	//if !devMode && syncCommands {
+	//	h.SyncCommands(hiveBot.Client)
+	//}
+	//adminplugin.Initialize(r, hiveBot, hiveService, devMode)
 	if devMode && syncCommands {
-		h.SyncCommands(hiveBot.Client, snowflake.GetEnv("GUILD_ID"))
 		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
+		logger.Info("Syncing commands...")
+		if err = handler.SyncCommands(hiveBot.Client, []discord.ApplicationCommandCreate{
+			gameplugin.GameCommandCreate,
+		}, []snowflake.ID{snowflake.GetEnv("GUILD_ID")}); err != nil {
+			logger.Error("error while syncing commands", slog.Any("err", err))
+			return
+		}
 	}
 
 	if err = hiveBot.Client.OpenShardManager(context.Background()); err != nil {

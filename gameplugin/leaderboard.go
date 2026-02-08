@@ -7,7 +7,7 @@ import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/handler"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/text/cases"
@@ -21,8 +21,8 @@ type LbUser struct {
 	Type          string
 }
 
-func LeaderboardCommand(b *common.Bot, gameService *State) func(event *events.ApplicationCommandInteractionCreate) error {
-	return func(event *events.ApplicationCommandInteractionCreate) error {
+func LeaderboardCommand(b *common.Bot, gameService *State) handler.CommandHandler {
+	return func(event *handler.CommandEvent) error {
 		data := event.SlashCommandInteractionData()
 		lbType := data.String("type")
 		lbTypeStr := ""

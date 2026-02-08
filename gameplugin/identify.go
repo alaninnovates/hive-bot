@@ -6,13 +6,11 @@ import (
 	"io"
 	"math/rand"
 	"strconv"
-	"strings"
 
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/common/loaders"
 	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/handler"
+	"github.com/disgoorg/disgo/handler"
 	"github.com/fogleman/gg"
 )
 
@@ -109,9 +107,9 @@ func GetAnswerSetButtons(userId string, IdentifyDifficulty IdentifyDifficulty) (
 	for i, answer := range answerSet {
 		id := ""
 		if answer.IsCorrect {
-			id = "handler:correct:" + userId + ":" + strconv.Itoa(int(IdentifyDifficulty))
+			id = "/game/identify-the-bee/correct/" + userId + "/" + strconv.Itoa(int(IdentifyDifficulty))
 		} else {
-			id = "handler:incorrect:" + userId + ":" + strconv.Itoa(int(IdentifyDifficulty)) + ":" + strconv.Itoa(i)
+			id = "/game/identify-the-bee/incorrect/" + userId + "/" + strconv.Itoa(int(IdentifyDifficulty)) + "/" + strconv.Itoa(i)
 		}
 		buttons = append(buttons, discord.ButtonComponent{
 			Label:    answer.Name,
@@ -122,8 +120,8 @@ func GetAnswerSetButtons(userId string, IdentifyDifficulty IdentifyDifficulty) (
 	return buttons, r
 }
 
-func IdentifyTheBeeCommand(gameService *State) func(event *events.ApplicationCommandInteractionCreate) error {
-	return func(event *events.ApplicationCommandInteractionCreate) error {
+func IdentifyTheBeeCommand(gameService *State) handler.CommandHandler {
+	return func(event *handler.CommandEvent) error {
 		if gameService.IsPlayingGame(event.User().ID) {
 			return event.CreateMessage(discord.MessageCreate{
 				Content: "You are already playing a game!",
@@ -162,8 +160,8 @@ func IdentifyTheBeeCommand(gameService *State) func(event *events.ApplicationCom
 	}
 }
 
-func TriviaButtonHandler(event *events.ComponentInteractionCreate) error {
-	difficulty, _ := strconv.Atoi(strings.Split(event.ButtonInteractionData().CustomID(), ":")[3])
+func TriviaButtonHandler(event *handler.ComponentEvent) error {
+	difficulty, _ := strconv.Atoi(event.Vars["difficulty"])
 	buttons, r := GetAnswerSetButtons(event.User().ID.String(), IdentifyDifficulty(difficulty))
 	return event.UpdateMessage(discord.MessageUpdate{
 		Embeds: &[]discord.Embed{
@@ -186,7 +184,7 @@ func TriviaButtonHandler(event *events.ComponentInteractionCreate) error {
 	})
 }
 
-func TriviaSummary(event *events.ComponentInteractionCreate, gameService *State) error {
+func TriviaSummary(event *handler.ComponentEvent, gameService *State) error {
 	user := gameService.GetGameUser(event.User().ID, GameTypeIdentifyTheBee).IdentifyGameUser
 	gameService.EndGame(event.User().ID)
 	return event.CreateMessage(discord.MessageCreate{
@@ -199,44 +197,36 @@ func TriviaSummary(event *events.ComponentInteractionCreate, gameService *State)
 	})
 }
 
-func IdentifyCorrectButton(b *common.Bot, gameService *State) handler.Component {
-	return handler.Component{
-		Name:  "correct",
-		Check: userIDCheck(),
-		Handler: func(event *events.ComponentInteractionCreate) error {
-			tu := gameService.GetGameUser(event.User().ID, GameTypeIdentifyTheBee)
-			if tu == nil {
-				return event.CreateMessage(discord.MessageCreate{
-					Content: "You are not in a trivia game",
-				})
-			}
-			iu := tu.IdentifyGameUser
-			iu.IncrementCorrect()
-			if iu.QuestionsAnswered() >= iu.QuestionAmount {
-				return TriviaSummary(event, gameService)
-			}
-			return TriviaButtonHandler(event)
-		},
+func IdentifyCorrectButton(b *common.Bot, gameService *State) handler.ComponentHandler {
+	return func(event *handler.ComponentEvent) error {
+		tu := gameService.GetGameUser(event.User().ID, GameTypeIdentifyTheBee)
+		if tu == nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You are not in a trivia game",
+			})
+		}
+		iu := tu.IdentifyGameUser
+		iu.IncrementCorrect()
+		if iu.QuestionsAnswered() >= iu.QuestionAmount {
+			return TriviaSummary(event, gameService)
+		}
+		return TriviaButtonHandler(event)
 	}
 }
 
-func IdentifyIncorrectButton(b *common.Bot, gameService *State) handler.Component {
-	return handler.Component{
-		Name:  "incorrect",
-		Check: userIDCheck(),
-		Handler: func(event *events.ComponentInteractionCreate) error {
-			tu := gameService.GetGameUser(event.User().ID, GameTypeIdentifyTheBee)
-			if tu == nil {
-				return event.CreateMessage(discord.MessageCreate{
-					Content: "You are not in a trivia game",
-				})
-			}
-			iu := tu.IdentifyGameUser
-			iu.IncrementIncorrect()
-			if iu.QuestionsAnswered() >= iu.QuestionAmount {
-				return TriviaSummary(event, gameService)
-			}
-			return TriviaButtonHandler(event)
-		},
+func IdentifyIncorrectButton(b *common.Bot, gameService *State) handler.ComponentHandler {
+	return func(event *handler.ComponentEvent) error {
+		tu := gameService.GetGameUser(event.User().ID, GameTypeIdentifyTheBee)
+		if tu == nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You are not in a trivia game",
+			})
+		}
+		iu := tu.IdentifyGameUser
+		iu.IncrementIncorrect()
+		if iu.QuestionsAnswered() >= iu.QuestionAmount {
+			return TriviaSummary(event, gameService)
+		}
+		return TriviaButtonHandler(event)
 	}
 }

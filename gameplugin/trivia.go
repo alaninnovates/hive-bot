@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
-	"github.com/disgoorg/handler"
+	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/json"
 	"github.com/disgoorg/snowflake/v2"
 	"go.mongodb.org/mongo-driver/bson"
@@ -97,7 +95,7 @@ func GetQuestion(difficulty TriviaDifficulty, userId snowflake.ID) (TriviaQuesti
 			correctIdx = i
 		}
 		buttons = append(buttons, discord.ButtonComponent{
-			CustomID: fmt.Sprintf("handler:trivia:%s:%s:%d", userId, correct, i),
+			CustomID: fmt.Sprintf("/game/trivia/trivia/%s/%s/%d", userId, correct, i),
 			Label:    strconv.Itoa(i + 1),
 			Style:    discord.ButtonStylePrimary,
 		})
@@ -127,9 +125,9 @@ func GetQuestion(difficulty TriviaDifficulty, userId snowflake.ID) (TriviaQuesti
 		}, discord.ActionRowComponent{}.AddComponents(buttons...)
 }
 
-func TriviaCommand(bot *common.Bot, gameService *State) func(event *events.ApplicationCommandInteractionCreate) error {
+func TriviaCommand(bot *common.Bot, gameService *State) handler.CommandHandler {
 	b = bot
-	return func(event *events.ApplicationCommandInteractionCreate) error {
+	return func(event *handler.CommandEvent) error {
 		//return event.CreateMessage(discord.MessageCreate{
 		//	Embeds: []discord.Embed{
 		//		{
@@ -162,98 +160,36 @@ func TriviaCommand(bot *common.Bot, gameService *State) func(event *events.Appli
 	}
 }
 
-func TriviaButton(gameState *State) handler.Component {
-	return handler.Component{
-		Name:  "trivia",
-		Check: userIDCheck(),
-		Handler: func(event *events.ComponentInteractionCreate) error {
-			data := strings.Split(event.ButtonInteractionData().CustomID(), ":")
-			_, idx := data[3], data[4]
-			user := gameState.GetGameUser(event.User().ID, GameTypeTrivia)
-			if user == nil {
-				return event.CreateMessage(discord.MessageCreate{
-					Content: "You are not playing a trivia game!",
-				})
-			}
-			tu := user.TriviaGameUser
-			index, _ := strconv.Atoi(idx)
-			tu.SetChosenIndex(index)
-			if len(tu.Questions) == 10 {
-				b.Db.Collection("leaderboards").FindOneAndUpdate(context.TODO(),
-					bson.D{{"user_id", event.User().ID}},
-					bson.D{
-						{"$inc", bson.D{{"trivia_points", tu.GetScore()}}},
-						{"$set", bson.D{{
-							"username", event.User().Username,
-						}, {
-							"discriminator", event.User().Discriminator,
-						}}},
-					},
-					options.FindOneAndUpdate().SetUpsert(true))
-				return event.UpdateMessage(discord.MessageUpdate{
-					Content: json.Ptr(fmt.Sprintf("You got %d out of 10 questions correct! That makes your score %d!", tu.GetCorrect(), tu.GetScore())),
-					Embeds: &[]discord.Embed{
-						{
-							Title:       "Help us!",
-							Description: "We are currently looking for more trivia questions. If you have any, please fill out [this form](https://forms.gle/5R5ouBdr4gkh7etH8).",
-							Color:       0x00ff00,
-						},
-					},
-					Components: &[]discord.ContainerComponent{
-						discord.ActionRowComponent{}.AddComponents(discord.ButtonComponent{
-							CustomID: "handler:endgame:" + event.User().ID.String(),
-							Label:    "End Game",
-							Style:    discord.ButtonStylePrimary,
-						}, discord.ButtonComponent{
-							CustomID: "handler:trivia-review:" + event.User().ID.String(),
-							Label:    "Review Questions",
-							Style:    discord.ButtonStyleSuccess,
-						}),
-					},
-				})
-			}
-			triviaAnswer, emb, buttons := GetQuestion(user.TriviaGameUser.Difficulty, event.User().ID)
-			tu.AddQuestion(triviaAnswer)
-			return event.UpdateMessage(discord.MessageUpdate{
-				Embeds: &[]discord.Embed{
-					emb,
-				},
-				Components: &[]discord.ContainerComponent{
-					buttons,
-				},
+func TriviaButton(gameState *State) handler.ComponentHandler {
+	return func(event *handler.ComponentEvent) error {
+		user := gameState.GetGameUser(event.User().ID, GameTypeTrivia)
+		if user == nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You are not playing a trivia game!",
 			})
-		},
-	}
-}
-
-func TriviaReviewButton(gameState *State) handler.Component {
-	return handler.Component{
-		Name:  "trivia-review",
-		Check: userIDCheck(),
-		Handler: func(event *events.ComponentInteractionCreate) error {
-			user := gameState.GetGameUser(event.User().ID, GameTypeTrivia)
-			if user == nil {
-				return event.CreateMessage(discord.MessageCreate{
-					Content: "You are not playing a trivia game!",
-				})
-			}
-			tu := user.TriviaGameUser
-			var fields []discord.EmbedField
-			for i, v := range tu.Questions {
-				timeTaken := float64(v.EndTime-v.StartTime) / 1000
-				timeTakenStr := fmt.Sprintf("%.2f seconds", timeTaken)
-				fields = append(fields, discord.EmbedField{
-					Name:  fmt.Sprintf("Question %d", i+1),
-					Value: fmt.Sprintf("Question: %s\nCorrect Answer: %s\nYour Answer: %s\nTime Taken: %s", v.Question, v.Choices[v.CorrectIndex], v.Choices[v.ChosenIndex], timeTakenStr),
-				})
-			}
+		}
+		tu := user.TriviaGameUser
+		index, _ := strconv.Atoi(event.Vars["i"])
+		tu.SetChosenIndex(index)
+		if len(tu.Questions) == 10 {
+			b.Db.Collection("leaderboards").FindOneAndUpdate(context.TODO(),
+				bson.D{{"user_id", event.User().ID}},
+				bson.D{
+					{"$inc", bson.D{{"trivia_points", tu.GetScore()}}},
+					{"$set", bson.D{{
+						"username", event.User().Username,
+					}, {
+						"discriminator", event.User().Discriminator,
+					}}},
+				},
+				options.FindOneAndUpdate().SetUpsert(true))
 			return event.UpdateMessage(discord.MessageUpdate{
-				Content: json.Ptr(""),
+				Content: json.Ptr(fmt.Sprintf("You got %d out of 10 questions correct! That makes your score %d!", tu.GetCorrect(), tu.GetScore())),
 				Embeds: &[]discord.Embed{
 					{
-						Title:       "Trivia Review",
-						Description: fmt.Sprintf("You got %d out of 10 questions correct!", tu.GetCorrect()),
-						Fields:      fields,
+						Title:       "Help us!",
+						Description: "We are currently looking for more trivia questions. If you have any, please fill out [this form](https://forms.gle/5R5ouBdr4gkh7etH8).",
+						Color:       0x00ff00,
 					},
 				},
 				Components: &[]discord.ContainerComponent{
@@ -261,9 +197,61 @@ func TriviaReviewButton(gameState *State) handler.Component {
 						CustomID: "handler:endgame:" + event.User().ID.String(),
 						Label:    "End Game",
 						Style:    discord.ButtonStylePrimary,
+					}, discord.ButtonComponent{
+						CustomID: "/game/trivia/trivia-review/" + event.User().ID.String(),
+						Label:    "Review Questions",
+						Style:    discord.ButtonStyleSuccess,
 					}),
 				},
 			})
-		},
+		}
+		triviaAnswer, emb, buttons := GetQuestion(user.TriviaGameUser.Difficulty, event.User().ID)
+		tu.AddQuestion(triviaAnswer)
+		return event.UpdateMessage(discord.MessageUpdate{
+			Embeds: &[]discord.Embed{
+				emb,
+			},
+			Components: &[]discord.ContainerComponent{
+				buttons,
+			},
+		})
+	}
+}
+
+func TriviaReviewButton(gameState *State) handler.ComponentHandler {
+	return func(event *handler.ComponentEvent) error {
+		user := gameState.GetGameUser(event.User().ID, GameTypeTrivia)
+		if user == nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You are not playing a trivia game!",
+			})
+		}
+		tu := user.TriviaGameUser
+		var fields []discord.EmbedField
+		for i, v := range tu.Questions {
+			timeTaken := float64(v.EndTime-v.StartTime) / 1000
+			timeTakenStr := fmt.Sprintf("%.2f seconds", timeTaken)
+			fields = append(fields, discord.EmbedField{
+				Name:  fmt.Sprintf("Question %d", i+1),
+				Value: fmt.Sprintf("Question: %s\nCorrect Answer: %s\nYour Answer: %s\nTime Taken: %s", v.Question, v.Choices[v.CorrectIndex], v.Choices[v.ChosenIndex], timeTakenStr),
+			})
+		}
+		return event.UpdateMessage(discord.MessageUpdate{
+			Content: json.Ptr(""),
+			Embeds: &[]discord.Embed{
+				{
+					Title:       "Trivia Review",
+					Description: fmt.Sprintf("You got %d out of 10 questions correct!", tu.GetCorrect()),
+					Fields:      fields,
+				},
+			},
+			Components: &[]discord.ContainerComponent{
+				discord.ActionRowComponent{}.AddComponents(discord.ButtonComponent{
+					CustomID: "/game/trivia/end/" + event.User().ID.String(),
+					Label:    "End Game",
+					Style:    discord.ButtonStylePrimary,
+				}),
+			},
+		})
 	}
 }
