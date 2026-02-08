@@ -46,7 +46,10 @@ func RenderHiveImage(h *hive.Hive, showHiveNumbers bool, slotsOnTop bool, skipHi
 	dc := gg.NewContext(410, 950)
 	hive.DrawHive(h, dc, showHiveNumbers, slotsOnTop, skipHiveNumbers)
 	img := dc.Image()
-	bg, _ := gg.LoadImage(loaders.GetHiveBackgroundImagePath(background))
+	bg, err := gg.LoadImage(loaders.GetHiveBackgroundImagePath(background))
+	if err != nil {
+		bg, _ = gg.LoadImage(loaders.GetHiveBackgroundImagePath("default"))
+	}
 	hiveImage := gg.NewContextForImage(bg)
 	hiveImage.DrawImageAnchored(img, hiveImage.Width()/2, hiveImage.Height()/2, 0.5, 0.5)
 	return common.ImageToPipe(hiveImage.Image())
