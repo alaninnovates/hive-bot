@@ -194,7 +194,7 @@ func TriviaButton(gameState *State) handler.ComponentHandler {
 				},
 				Components: &[]discord.ContainerComponent{
 					discord.ActionRowComponent{}.AddComponents(discord.ButtonComponent{
-						CustomID: "handler:endgame:" + event.User().ID.String(),
+						CustomID: "/game/trivia/end/" + event.User().ID.String(),
 						Label:    "End Game",
 						Style:    discord.ButtonStylePrimary,
 					}, discord.ButtonComponent{
