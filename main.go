@@ -11,6 +11,7 @@ import (
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/gameplugin"
+	"alaninnovates.com/hive-bot/miscplugin"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -80,7 +81,7 @@ func main() {
 	//hiveService := hiveplugin.NewHiveService()
 	//hiveplugin.Initialize(r, hiveBot, hiveService)
 	//guideplugin.Initialize(r, hiveBot)
-	//miscplugin.Initialize(r, hiveBot)
+	miscplugin.Initialize(r, hiveBot)
 
 	//r.NotFound()
 
@@ -112,6 +113,8 @@ func main() {
 		logger.Info("Syncing commands...")
 		if err = handler.SyncCommands(hiveBot.Client, []discord.ApplicationCommandCreate{
 			gameplugin.GameCommandCreate,
+			miscplugin.HelpCommandCreate,
+			miscplugin.StatsCommandCreate,
 		}, []snowflake.ID{snowflake.GetEnv("GUILD_ID")}); err != nil {
 			logger.Error("error while syncing commands", slog.Any("err", err))
 			return
