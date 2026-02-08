@@ -246,7 +246,7 @@ func HiveRerenderButton(b *common.Bot, hiveService *State) handler.ButtonCompone
 
 func SaveIdButton() handler.ButtonComponentHandler {
 	return func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
-		id := strings.Split(event.ButtonInteractionData().CustomID(), ":")[3]
+		id := event.Vars["id"]
 		return event.CreateMessage(discord.MessageCreate{Content: id})
 	}
 }
