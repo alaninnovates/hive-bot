@@ -36,6 +36,7 @@ func main() {
 	useEnvFilePtr := flag.Bool("env", false, "a bool")
 	devPtr := flag.Bool("dev", false, "a bool")
 	syncCommandsPtr := flag.Bool("sync", false, "a bool")
+	clearCommandsPtr := flag.Bool("clear", false, "a bool")
 	flag.Parse()
 	if *useEnvFilePtr {
 		if *devPtr {
@@ -54,6 +55,7 @@ func main() {
 	}
 	devMode := *devPtr
 	syncCommands := *syncCommandsPtr
+	clearCommands := *clearCommandsPtr
 	var (
 		token = os.Getenv("TOKEN")
 		dbUri = os.Getenv("MONGODB_URI")
@@ -109,7 +111,10 @@ func main() {
 	adminplugin.Initialize(r, hiveBot, hiveService, devMode)
 
 	if syncCommands {
-		//_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
+		if clearCommands {
+			logger.Info("Clearing existing commands...")
+			_, _ = hiveBot.Client.Rest().SetGlobalCommands(hiveBot.Client.ApplicationID(), []discord.ApplicationCommandCreate{})
+		}
 		logger.Info("Syncing commands...")
 		commands := []discord.ApplicationCommandCreate{
 			hiveplugin.HiveCommandCreate,
