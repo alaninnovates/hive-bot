@@ -13,6 +13,7 @@ import (
 func AddBeeButton() handler.ButtonComponentHandler {
 	return func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
 		return event.Modal(discord.NewModalCreateBuilder().
+			SetTitle("Add a bee to your hive").
 			SetCustomID(fmt.Sprintf("/hive/modals/addbee/%s", event.User().ID)).
 			AddActionRow(discord.NewShortTextInput("name", "Bee name")).
 			AddActionRow(discord.NewShortTextInput("slots", "Slots")).
