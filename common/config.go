@@ -6,7 +6,7 @@ var (
 	MaxFreeSaves    = 5
 	MaxPremiumSaves = 25
 	LinksActionRow  = discord.ActionRowComponent{
-		discord.NewLinkButton("Documentation", "https://hive-builder.alaninnovates.com/"),
-		discord.NewLinkButton("Support server", "https://discord.gg/meta-bee-995988457136603147"),
+		discord.NewLinkButton("Documentation", "https://meta-bee.com/hive-builder/"),
+		discord.NewLinkButton("Support server", "https://discord.gg/2BgUMfCsHM"),
 	}
 )
