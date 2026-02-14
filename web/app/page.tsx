@@ -1,5 +1,6 @@
 "use server";
 import {getCurrentSession} from "@/lib/server/session";
+import {getHivePosts} from "@/lib/database/posts";
 
 export default async function Page() {
     const {user} = await getCurrentSession();
@@ -12,7 +13,12 @@ export default async function Page() {
             </>
         );
     }
-    return <>
-        {JSON.stringify(user, null, 2)}
-    </>
+    const posts = await getHivePosts();
+    console.log(posts);
+
+    return (
+        <>
+            {JSON.stringify(posts, null, 2)}
+        </>
+    )
 }
