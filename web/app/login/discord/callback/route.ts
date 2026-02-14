@@ -39,13 +39,12 @@ export async function GET(request: Request): Promise<Response> {
     const userResponse = await fetch(userRequest);
     const userResult: unknown = await userResponse.json();
     const userParser = new ObjectParser(userResult);
-
-    const discordUserId = parseInt(userParser.getString("id"));
+    const discordUserId = userParser.getString("id");
     const username = userParser.getString("username");
     const globalName = userParser.get("global_name") ? userParser.getString("global_name") : undefined;
     const profileUrl = userParser.get("avatar") ?
             `https://cdn.discordapp.com/avatars/${discordUserId}/${userParser.getString("avatar")}.png`
-        : `https://cdn.discordapp.com/embed/avatars/${(discordUserId >> 22) % 6}.png`;
+        : `https://cdn.discordapp.com/embed/avatars/${(BigInt(discordUserId) >> BigInt(22)) % BigInt(6)}.png`;
     const email = userParser.getString("email");
 
     const existingUser = await getUserFromDiscordId(discordUserId);

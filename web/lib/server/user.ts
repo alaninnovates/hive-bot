@@ -1,4 +1,5 @@
 import {getDb} from "./db";
+import {Long} from "bson";
 
 export async function createUser(user: User): Promise<User> {
     const db = await getDb();
@@ -15,7 +16,7 @@ export async function createUser(user: User): Promise<User> {
     return user;
 }
 
-export async function getUserFromDiscordId(discordId: number): Promise<User | null> {
+export async function getUserFromDiscordId(discordId: string): Promise<User | null> {
     const db = await getDb();
     const row = await db.collection("users").findOne({discord_id: discordId});
     if (row === null) {
@@ -31,7 +32,7 @@ export async function getUserFromDiscordId(discordId: number): Promise<User | nu
 }
 
 export interface User {
-    discordId: number;
+    discordId: string;
     email: string;
     username: string;
     profileUrl?: string;

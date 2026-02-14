@@ -108,7 +108,7 @@ export function generateSessionToken(): string {
     return encodeBase32(tokenBytes).toLowerCase();
 }
 
-export async function createSession(token: string, discordId: number): Promise<Session> {
+export async function createSession(token: string, discordId: string): Promise<Session> {
     const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
     const session: Session = {
         id: sessionId,
@@ -127,7 +127,7 @@ export async function createSession(token: string, discordId: number): Promise<S
 export interface Session {
     id: string;
     expiresAt: Date;
-    discordId: number;
+    discordId: string;
 }
 
 type SessionValidationResult = { session: Session; user: User } | { session: null; user: null };
