@@ -27,7 +27,6 @@ const officialBuilds = [
 
 export default async function Page() {
     const hives = await getHivePosts();
-    // column flex layout, can click on each post to get to the post page, which is /posts/[postId]
     return (
         <div className="container mx-auto py-12 px-4 grow">
             <div className="mb-8">
@@ -40,10 +39,11 @@ export default async function Page() {
                     <div className="flex space-x-4">
                         {officialBuilds.map((hive) => (
                             <a
+                                key={hive.link}
                                 href={hive.link}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="max-w-[300px] bg-white rounded-md overflow-hidden"
+                                className="max-w-[300px] bg-white rounded-md overflow-hidden border border-gray-200"
                             >
                                 <img
                                     src={hive.image}
@@ -63,7 +63,32 @@ export default async function Page() {
                     <ScrollBar orientation="horizontal" />
                 </ScrollArea>
             </div>
-            {/*section for community-built */}
+            <div>
+                <h2 className="text-2xl font-bold mb-4">Community Builds</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {hives.map(({post, hive, user}) => (
+                        <a
+                            key={post._id}
+                            href={`/posts/${post._id}`}
+                            className="bg-white rounded-md overflow-hidden border border-gray-200"
+                        >
+                            {/* todo generate canvas image*/}
+                            <img
+                                src={""}
+                                alt={post.title}
+                                className="w-full h-48 object-cover"
+                            />
+                            <div className="p-4">
+                                <h3 className="text-lg font-semibold">{post.title}</h3>
+                                <p className="text-gray-500 text-sm">By {user.globalName}</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                    {new Date(post.createdAt).toLocaleDateString()}
+                                </p>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </div>
         </div>
     )
 }

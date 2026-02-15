@@ -3,13 +3,14 @@ import {User} from "@/lib/server/user";
 import {ObjectId, WithId} from "mongodb";
 import {Long} from "bson";
 
-export const getHivePosts = async (): Promise<{
+export const getHivePosts = async ({postId}: { postId?: string; } = {}): Promise<{
     post: WithId<Post>;
     hive: Hive;
     user: User;
 }[]> => {
     const db = await getDb();
     const posts = await db.collection("posts").aggregate([
+        ...(postId ? [{$match: {_id: new ObjectId(postId)}}] : []),
         {
             $lookup: {
                 from: "hives",
