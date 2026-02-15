@@ -27,6 +27,9 @@ export const Navbar = async () => {
                             <NavigationMenuLink href="/posts">Hive Builds</NavigationMenuLink>
                         </NavigationMenuItem>
                         <NavigationMenuItem>
+                            <NavigationMenuLink href="/docs">Documentation</NavigationMenuLink>
+                        </NavigationMenuItem>
+                        <NavigationMenuItem>
                             <NavigationMenuLink href="https://meta-bee.com" target="_blank" rel="noopener noreferrer">Meta
                                 Bee<ArrowUpRight className="ml-1 h-3 w-3"/></NavigationMenuLink>
                         </NavigationMenuItem>
