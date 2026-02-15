@@ -1,10 +1,10 @@
 import {getDb} from "@/lib/server/db";
 import {User} from "@/lib/server/user";
-import {ObjectId} from "mongodb";
+import {ObjectId, WithId} from "mongodb";
 import {Long} from "bson";
 
 export const getHivePosts = async (): Promise<{
-    post: Post;
+    post: WithId<Post>;
     hive: Hive;
     user: User;
 }[]> => {
@@ -41,6 +41,7 @@ export const getHivePosts = async (): Promise<{
         {$unwind: "$user"},
         {
             $project: {
+                "post._id": "$_id",
                 "post.title": "$title",
                 "post.content": "$content",
                 "post.createdAt": "$created_at",
@@ -57,7 +58,7 @@ export const getHivePosts = async (): Promise<{
         }
     ]).toArray();
     return posts as {
-        post: Post;
+        post: WithId<Post>;
         hive: Hive;
         user: User;
     }[];
