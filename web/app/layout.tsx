@@ -1,36 +1,38 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import type {Metadata} from "next";
+import {Geist, Geist_Mono, Inter} from "next/font/google";
 import "./globals.css";
+import {Navbar} from "@/components/navbar";
 
-const inter = Inter({subsets:['latin'],variable:'--font-sans'});
+const inter = Inter({subsets: ['latin'], variable: '--font-sans'});
 
 const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+    variable: "--font-geist-sans",
+    subsets: ["latin"],
 });
 
 const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+    variable: "--font-geist-mono",
+    subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Hive Builder",
-  description: "Best Bee Swarm Simulator hive builder!",
+    title: "Hive Builder",
+    description: "Best Bee Swarm Simulator hive builder!",
 };
 
 export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
+                                       children,
+                                   }: Readonly<{
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" className={inter.variable}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
-    </html>
-  );
+    return (
+        <html lang="en" className={inter.variable}>
+        <body
+            className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+            <Navbar/>
+            {children}
+        </body>
+        </html>
+    );
 }
