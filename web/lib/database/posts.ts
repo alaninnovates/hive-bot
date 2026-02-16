@@ -47,6 +47,7 @@ export const getHivePosts = async ({postId}: { postId?: string; } = {}): Promise
                 "post.content": "$content",
                 "post.createdAt": "$created_at",
                 "post.hiveId": "$hive_id",
+                "post.imageUrl": "$image_url",
                 "hive.name": "$hive.name",
                 "hive.userId": "$hive.user_id",
                 "hive.bees": "$hive.bees",
@@ -70,6 +71,7 @@ interface Post {
     content: string;
     createdAt: Date;
     hiveId: ObjectId;
+    imageUrl: string;
 }
 
 interface Hive {

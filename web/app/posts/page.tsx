@@ -68,13 +68,12 @@ export default async function Page() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {hives.map(({post, hive, user}) => (
                         <a
-                            key={post._id}
+                            key={post._id.toString()}
                             href={`/posts/${post._id}`}
                             className="bg-white rounded-md overflow-hidden border border-gray-200"
                         >
-                            {/* todo generate canvas image*/}
                             <img
-                                src={""}
+                                src={post.imageUrl}
                                 alt={post.title}
                                 className="w-full h-48 object-cover"
                             />
