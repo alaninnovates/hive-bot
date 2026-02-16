@@ -1,5 +1,6 @@
 import {Button} from "@/components/ui/button";
 import {ArrowUpRight} from "lucide-react";
+import Link from "next/link";
 
 export default async function Page() {
     return (
@@ -13,8 +14,12 @@ export default async function Page() {
                         share your hives with the community.
                     </p>
                     <div className="flex flex-col md:flex-row items-center gap-4">
-                        <Button variant="outline">Browse Hives</Button>
-                        <Button>Invite <ArrowUpRight className="ml-1 h-3 w-3"/></Button>
+                        <Link href="/posts">
+                            <Button variant="outline">Browse Hives</Button>
+                        </Link>
+                        <Link href="/docs">
+                            <Button>Invite <ArrowUpRight className="ml-1 h-3 w-3"/></Button>
+                        </Link>
                     </div>
                 </div>
                 <div className="md:w-1/2 mt-8 md:mt-0">

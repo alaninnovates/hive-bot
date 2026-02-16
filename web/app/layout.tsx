@@ -2,6 +2,7 @@ import type {Metadata} from "next";
 import {Geist, Geist_Mono, Inter} from "next/font/google";
 import "./globals.css";
 import {Navbar} from "@/components/navbar";
+import {TooltipProvider} from "@/components/ui/tooltip";
 
 const inter = Inter({subsets: ['latin'], variable: '--font-sans'});
 
@@ -30,10 +31,12 @@ export default function RootLayout({
         <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
+        <TooltipProvider>
             <div className="flex flex-col min-h-screen">
                 <Navbar/>
                 {children}
             </div>
+        </TooltipProvider>
         </body>
         </html>
     );
