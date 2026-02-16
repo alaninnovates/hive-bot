@@ -1,6 +1,15 @@
 import {Button} from "@/components/ui/button";
 import {ArrowUpRight} from "lucide-react";
 import Link from "next/link";
+import {
+    DiscordActionRow,
+    DiscordAttachments,
+    DiscordButton,
+    DiscordCommand,
+    DiscordEmbed,
+    DiscordMessage,
+    DiscordMessages,
+} from "@skyra/discord-components-react";
 
 export default async function Page() {
     return (
@@ -23,7 +32,32 @@ export default async function Page() {
                     </div>
                 </div>
                 <div className="md:w-1/2 mt-8 md:mt-0">
-                    <img src="/" alt="pic" className="w-full"/>
+                    <div className="w-full rounded-md p-4 overflow-auto bg-[#36393E]">
+                        <DiscordMessages className="w-full h-full">
+                            <DiscordMessage profile="Hive Builder"
+                                            author="Hive Builder"
+                                            avatar="https://cdn.discordapp.com/app-icons/1051308449172049970/2200fff798c868556892fae4981d6acb.png"
+                            >
+                                <DiscordCommand slot="reply"
+                                                profile="alaninnovates"
+                                                command="/hive view"
+                                                author="alaninnovates"
+                                />
+                                <DiscordEmbed slot="embeds" embedTitle="alaninnovates's Hive"
+                                              image="https://meta-bee.com/wp-content/uploads/2023/08/diamond-30.3.png"
+                                              color="#3B3B40"/>
+                                <DiscordAttachments slot="components">
+                                    <DiscordActionRow>
+                                        <DiscordButton type="primary">Add Bee</DiscordButton>
+                                        <DiscordButton type="primary">Gift All</DiscordButton>
+                                        <DiscordButton type="primary">Set Level All</DiscordButton>
+                                        <DiscordButton type="success">Hive Info</DiscordButton>
+                                        <DiscordButton type="secondary">Rerender Hive</DiscordButton>
+                                    </DiscordActionRow>
+                                </DiscordAttachments>
+                            </DiscordMessage>
+                        </DiscordMessages>
+                    </div>
                 </div>
             </div>
         </section>
