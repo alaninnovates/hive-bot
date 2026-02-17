@@ -205,6 +205,27 @@ var HiveCommandCreate = discord.SlashCommandCreate{
 				},
 			},
 		},
+		discord.ApplicationCommandOptionSubCommand{
+			Name:        "post",
+			Description: "Post your hive to the hive sharing website.",
+			Options: []discord.ApplicationCommandOption{
+				discord.ApplicationCommandOptionString{
+					Name:        "id",
+					Description: "The id of the hive save you want to post",
+					Required:    true,
+				},
+				discord.ApplicationCommandOptionString{
+					Name:        "title",
+					Description: "The title of your post",
+					Required:    true,
+				},
+				discord.ApplicationCommandOptionString{
+					Name:        "content",
+					Description: "The content of your post",
+					Required:    true,
+				},
+			},
+		},
 	},
 }
 
@@ -230,6 +251,7 @@ func Initialize(r *handler.Mux, b *common.Bot, hiveService *State) {
 			r.Command("/delete", SavesDeleteCommand(b, hiveService))
 			r.ButtonComponent("/saveid/{id}", SaveIdButton())
 		})
+		r.Command("/post", PostCommand(b, hiveService))
 		r.Route("/buttons", func(r handler.Router) {
 			r.Use(UserOwnsHiveCheck)
 			r.ButtonComponent("/addbee/{uid}", AddBeeButton())

@@ -11,4 +11,5 @@ type Bot struct {
 	Logger *slog.Logger
 	Client bot.Client
 	Db     database.Database
+	R2     database.R2
 }

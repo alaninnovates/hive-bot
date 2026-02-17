@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"alaninnovates.com/hive-bot/common"
 	"alaninnovates.com/hive-bot/common/loaders"
+	"alaninnovates.com/hive-bot/database"
 	"alaninnovates.com/hive-bot/hiveplugin/hive"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
@@ -525,6 +527,87 @@ func SavesDeleteCommand(b *common.Bot, hiveService *State) handler.CommandHandle
 		}
 		return event.CreateMessage(discord.MessageCreate{
 			Content: "Deleted save.",
+		})
+	}
+}
+
+func PostCommand(b *common.Bot, hiveService *State) handler.CommandHandler {
+	return func(event *handler.CommandEvent) error {
+		data := event.SlashCommandInteractionData()
+		id, _ := data.OptString("id")
+		title, _ := data.OptString("title")
+		content, _ := data.OptString("content")
+		if id == "" {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You need to provide a non-empty id for the hive.",
+			})
+		}
+		oid, err := primitive.ObjectIDFromHex(id)
+		if err != nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "Invalid id.",
+			})
+		}
+		var h bson.D
+		err = b.Db.Collection("hives").FindOne(context.Background(), bson.M{
+			"user_id": event.User().ID,
+			"_id":     oid,
+		}).Decode(&h)
+		if err != nil {
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "You don't have a hive with that id.",
+			})
+		}
+		userHive := hiveService.CreateHive(event.User().ID)
+		for _, bl := range h.Map()["bees"].(primitive.D) {
+			key := bl.Key
+			for _, bh := range bl.Value.(primitive.A) {
+				be := bh.(primitive.D)
+				id := be.Map()["id"].(string)
+				level := be.Map()["level"].(int32)
+				gifted := be.Map()["gifted"].(bool)
+				beequip, ok := be.Map()["beequip"].(string)
+				mutation, ok2 := be.Map()["mutation"].(string)
+				if !ok || beequip == "" {
+					beequip = "None"
+				}
+				if !ok2 {
+					mutation = "None"
+				}
+				bee := hive.NewBee(int(level), id, gifted)
+				bee.SetBeequip(beequip)
+				bee.SetMutation(mutation)
+				i, _ := strconv.ParseInt(key, 10, 64)
+				userHive.AddBee(bee, int(i))
+			}
+		}
+		r := RenderHiveImage(userHive, false, false, make([]int, 0), "default")
+		link, err := b.R2.UploadImage(fmt.Sprintf("hive-%s.png", id), r)
+		if err != nil {
+			b.Logger.Error("Error uploading hive image: ", err)
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "Something went wrong while uploading the hive image. Try again later.",
+			})
+		}
+		post := database.Post{
+			ID:        primitive.NewObjectID(),
+			Title:     title,
+			Content:   content,
+			CreatedAt: primitive.NewDateTimeFromTime(time.Now()),
+			HiveId:    oid,
+			ImageUrl:  link,
+		}
+		res, err := b.Db.Collection("posts").InsertOne(context.Background(), post)
+		if err != nil {
+			b.Logger.Error("Error creating post: ", err)
+			return event.CreateMessage(discord.MessageCreate{
+				Content: "Something went wrong while creating the post.",
+			})
+		}
+		insertedId := res.InsertedID.(primitive.ObjectID)
+		insertedStr, _ := insertedId.MarshalText()
+		return event.CreateMessage(discord.MessageCreate{
+			Content: "Created post. Access it at " + fmt.Sprintf("https://hives.meta-bee.com/posts/%s", insertedStr),
 		})
 	}
 }

@@ -64,6 +64,7 @@ func main() {
 	hiveBot := &common.Bot{
 		Logger: logger,
 		Db:     *database.NewDatabase(),
+		R2:     *database.NewR2(),
 	}
 
 	client, err := hiveBot.Db.Connect(dbUri)
@@ -77,6 +78,12 @@ func main() {
 			panic(err)
 		}
 	}()
+
+	err = hiveBot.R2.Connect(os.Getenv("CF_ACCOUNT_ID"), os.Getenv("CF_ACCESS_KEY_ID"), os.Getenv("CF_ACCESS_KEY_SECRET"))
+	if err != nil {
+		logger.Error("Failed to connect to R2")
+		panic(err)
+	}
 
 	r := handler.New()
 	r.Use(middleware.Go)

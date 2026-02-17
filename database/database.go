@@ -36,6 +36,15 @@ type PremiumUser struct {
 	MemberSince  primitive.DateTime `bson:"member_since"`
 }
 
+type Post struct {
+	ID        primitive.ObjectID `bson:"_id"`
+	Title     string             `bson:"title"`
+	Content   string             `bson:"content"`
+	CreatedAt primitive.DateTime `bson:"created_at"`
+	HiveId    primitive.ObjectID `bson:"hive_id"`
+	ImageUrl  string             `bson:"image_url"`
+}
+
 func NewDatabase() *Database {
 	return &Database{}
 }
