@@ -1,7 +1,7 @@
 import pymongo
 from pymongo import MongoClient
 
-conn = MongoClient('mongodb+srv://admin:R09n16mwx0iMXwLV@cluster0.n7wrnue.mongodb.net/?retryWrites=true&w=majority')
+conn = MongoClient('')
 db = conn.get_database("hive-bot")
 hives = db.get_collection("hives")
 
